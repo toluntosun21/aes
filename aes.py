@@ -154,7 +154,7 @@ def text2matrix(text):
         if i % 4 == 0:
             matrix.append([byte])
         else:
-            matrix[i / 4].append(byte)
+            matrix[i // 4].append(byte)
     return matrix
 
 
@@ -174,14 +174,14 @@ class AES:
 
     def change_key(self, master_key):
         self.round_keys = text2matrix(master_key)
-        # print self.round_keys
+        # print(self.round_keys)
 
         for i in range(4, 4 * 11):
             self.round_keys.append([])
             if i % 4 == 0:
                 byte = self.round_keys[i - 4][0]        \
                      ^ Sbox[self.round_keys[i - 1][1]]  \
-                     ^ Rcon[i / 4]
+                     ^ Rcon[i // 4]
                 self.round_keys[i].append(byte)
 
                 for j in range(1, 4):
@@ -194,7 +194,7 @@ class AES:
                          ^ self.round_keys[i - 1][j]
                     self.round_keys[i].append(byte)
 
-        # print self.round_keys
+        # print(self.round_keys)
 
     def encrypt(self, plaintext):
         self.plain_state = text2matrix(plaintext)
@@ -236,18 +236,18 @@ if __name__ == '__main__':
     encrypted = my_AES.encrypt(plaintext)
     decrypted = my_AES.decrypt(encrypted)
 
-    print 'plaintext:', hex(plaintext)
-    print 'masterkey:', hex(master_key)
+    print('plaintext:', hex(plaintext))
+    print('masterkey:', hex(master_key))
 
-    print 'encrypted:', hex(encrypted),
+    print('encrypted:', hex(encrypted), end=' ')
     if encrypted == 0x3925841d02dc09fbdc118597196a0b32:
-        print 'correct!'
+        print('correct!')
     else:
-        print 'wrong...'
-    print 'should be:', hex(0x3925841d02dc09fbdc118597196a0b32)
+        print('wrong...')
+    print('should be:', hex(0x3925841d02dc09fbdc118597196a0b32))
 
-    print 'decrypted:', hex(decrypted),
+    print('decrypted:', hex(decrypted), end=' ')
     if decrypted == plaintext:
-        print 'correct!'
+        print('correct!')
     else:
-        print 'wrong...'
+        print('wrong...')

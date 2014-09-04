@@ -1,26 +1,8 @@
 #!/usr/bin/env python
-
-
 """
-    Copyright (C) 2012 Bo Zhu http://about.bozhu.me
+Origianl AES implementation by Bo Zhu (http://about.bozhu.me).
 
-    Permission is hereby granted, free of charge, to any person obtaining a
-    copy of this software and associated documentation files (the "Software"),
-    to deal in the Software without restriction, including without limitation
-    the rights to use, copy, modify, merge, publish, distribute, sublicense,
-    and/or sell copies of the Software, and to permit persons to whom the
-    Software is furnished to do so, subject to the following conditions:
-
-    The above copyright notice and this permission notice shall be included in
-    all copies or substantial portions of the Software.
-
-    THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
-    IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-    FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL
-    THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
-    LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING
-    FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
-    DEALINGS IN THE SOFTWARE.
+PKCS#7, CBC and byte array support by Lucas Boppre (http://boppreh.com).
 """
 
 
@@ -158,18 +140,30 @@ def matrix2bytes(matrix):
     return bytes(sum(matrix, []))
 
 def xor_bytes(a, b):
-    return bytes([i^j for i, j in zip(a, b)])
+    return bytes(i^j for i, j in zip(a, b))
+
+def pad(plaintext):
+    # PKCS#7 padding. Note that if the plaintext size is a multiple of 16,
+    # a whole block will be added.
+    padding_len = 16 - (len(plaintext) % 16)
+    padding = bytes([padding_len] * padding_len)
+    return plaintext + padding
 
 
 class AES:
-    "only for AES-128"
-
+    """Class for AES-128 encryption with CBC mode and PKCS#7."""
     def __init__(self, master_key):
+        """
+        Initializes the object with a given key.
+        """
         self.change_key(master_key)
 
     def change_key(self, master_key):
+        """
+        Initializes the object with a different key.
+        """
+        assert len(master_key) == 16
         self.round_keys = bytes2matrix(master_key)
-        # print(self.round_keys)
 
         for i in range(4, 4 * 11):
             self.round_keys.append([])
@@ -189,9 +183,10 @@ class AES:
                          ^ self.round_keys[i - 1][j]
                     self.round_keys[i].append(byte)
 
-        # print(self.round_keys)
-
     def encrypt_block(self, plaintext):
+        """
+        Encrypts a single block of 16 byte long plaintext.
+        """
         self.plain_state = bytes2matrix(plaintext)
 
         add_round_key(self.plain_state, self.round_keys[:4])
@@ -206,6 +201,9 @@ class AES:
         return matrix2bytes(self.plain_state)
 
     def decrypt_block(self, ciphertext):
+        """
+        Decrypts a single block of 16 byte long ciphertext.
+        """
         self.cipher_state = bytes2matrix(ciphertext)
 
         add_round_key(self.cipher_state, self.round_keys[40:])
@@ -220,21 +218,18 @@ class AES:
         return matrix2bytes(self.cipher_state)
 
     def encrypt(self, plaintext, iv):
+        """
+        Encrypts `plaintext` using CBC mode and PKCS#7 padding, with the given
+        initialization vector (iv).
+        """
         assert len(iv) == 16
-
-        # PKCS#7 padding. Note that if the plaintext is a multiple of 16,
-        # a whole block will be added as padding.
-        padding_len = 16 - (len(plaintext) % 16)
-        padding = bytes([padding_len] * padding_len)
-
-        plaintext += padding
-
+        plaintext = pad(plaintext)
         blocks = []
-
         previous = iv
         for i in range(0, len(plaintext), 16):
             plaintext_block = plaintext[i:i+16]
-            # plaintext_block XOR previous
+            # CBC mode
+            # encrypt(plaintext_block XOR previous)
             block = self.encrypt_block(xor_bytes(plaintext_block, previous))
             blocks.append(block)
             previous = block
@@ -242,14 +237,18 @@ class AES:
         return b''.join(blocks)
 
     def decrypt(self, ciphertext, iv):
+        """
+        Decrypts `plaintext` using CBC mode and PKCS#7 padding, with the given
+        initialization vector (iv).
+        """
         assert len(iv) == 16
-
-        l = len(ciphertext)
 
         blocks = []
         previous = iv
-        for i in range(0, l, 16):
+        for i in range(0, len(ciphertext), 16):
             ciphertext_block = ciphertext[i:i+16]
+            # CBC mode
+            # previous XOR decrypt(ciphertext)
             blocks.append(xor_bytes(previous, self.decrypt_block(ciphertext_block)))
             previous = ciphertext_block
 
@@ -260,16 +259,33 @@ class AES:
 
 import os
 def encrypt(key, plaintext, iv=None):
+    """
+    Encrypts `plaintext` with `key`. `iv` must be a unique 16 byte array of
+    cryptographically secure random numbers. If `iv` is not provided, a new one
+    will be created from the system's urandom source.
+
+    Encryption is AES-128 with CBC mode and PKCS#7 padding, with IV prepended.
+    """
     iv = iv or os.urandom(16)
     return iv + AES(key).encrypt(plaintext, iv)
 
 def decrypt(key, ciphertext):
+    """
+    Decrypts `ciphertext` with `key`.
+    
+    Encryption is AES-128 with CBC mode and PKCS#7 padding, with IV prepended.
+    """
+    assert len(ciphertext) >= 32, """
+    Ciphertext must be at least 32 bytes long (16 byte IV + 16 byte block). To
+    encrypt or decrypt single blocks use `AES(key).decrypt_block(ciphertext)`.
+    """
     iv, ciphertext = ciphertext[:16], ciphertext[16:]
     return AES(key).decrypt(ciphertext, iv)
 
+__all__ = [encrypt, decrypt, AES]
 
 if __name__ == '__main__':
     key = b'P' * 16
     ciphertext = encrypt(key, b'M' * 16)
-    print(ciphertext, len(ciphertext))
+    print(ciphertext)
     print(decrypt(key, ciphertext))

@@ -222,11 +222,9 @@ class AES:
     def encrypt(self, plaintext, iv):
         assert len(iv) == 16
 
-        l = len(plaintext)
-
         # PKCS#7 padding. Note that if the plaintext is a multiple of 16,
         # a whole block will be added as padding.
-        padding_len = 16 - (l % 16)
+        padding_len = 16 - (len(plaintext) % 16)
         padding = bytes([padding_len] * padding_len)
 
         plaintext += padding
@@ -234,7 +232,7 @@ class AES:
         blocks = []
 
         previous = iv
-        for i in range(0, l, 16):
+        for i in range(0, len(plaintext), 16):
             plaintext_block = plaintext[i:i+16]
             # plaintext_block XOR previous
             block = self.encrypt_block(xor_bytes(plaintext_block, previous))
@@ -255,7 +253,9 @@ class AES:
             blocks.append(xor_bytes(previous, self.decrypt_block(ciphertext_block)))
             previous = ciphertext_block
 
-        return b''.join(blocks)
+        plaintext = b''.join(blocks)
+        padding_len = plaintext[-1]
+        return plaintext[:-padding_len]
 
 
 import os
@@ -271,4 +271,5 @@ def decrypt(key, ciphertext):
 if __name__ == '__main__':
     key = b'P' * 16
     ciphertext = encrypt(key, b'M' * 16)
+    print(ciphertext, len(ciphertext))
     print(decrypt(key, ciphertext))

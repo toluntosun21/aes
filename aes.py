@@ -258,20 +258,17 @@ class AES:
         return b''.join(blocks)
 
 
+import os
+def encrypt(key, plaintext, iv=None):
+    iv = iv or os.urandom(16)
+    return iv + AES(key).encrypt(plaintext, iv)
+
+def decrypt(key, ciphertext):
+    iv, ciphertext = ciphertext[:16], ciphertext[16:]
+    return AES(key).decrypt(ciphertext, iv)
 
 
 if __name__ == '__main__':
-    plaintext = b'P' * 16
-    #plaintext = 0x3243f6a8885a308d313198a2e0370734
-    master_key = b'M' * 16
-    #master_key = 0x2b7e151628aed2a6abf7158809cf4f3c
-    # the ciphertext should be
-    # 0x3925841d02dc09fbdc118597196a0b32
-    iv = b'\0' * 16
-
-    a = AES(master_key)
-
-    encrypted = a.encrypt(plaintext, iv)
-    print(encrypted)
-    decrypted = a.decrypt(encrypted, iv)
-    print(decrypted)
+    key = b'P' * 16
+    ciphertext = encrypt(key, b'M' * 16)
+    print(decrypt(key, ciphertext))

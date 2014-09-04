@@ -151,7 +151,12 @@ def pad(plaintext):
 
 
 class AES:
-    """Class for AES-128 encryption with CBC mode and PKCS#7."""
+    """
+    Class for AES-128 encryption with CBC mode and PKCS#7.
+
+    This is a raw implementation of AES, without key stretching or IV
+    management. Unless you need that, please use `encrypt` and `decrypt`.
+    """
     def __init__(self, master_key):
         """
         Initializes the object with a given key.
@@ -258,34 +263,58 @@ class AES:
 
 
 import os
-def encrypt(key, plaintext, iv=None):
-    """
-    Encrypts `plaintext` with `key`. `iv` must be a unique 16 byte array of
-    cryptographically secure random numbers. If `iv` is not provided, a new one
-    will be created from the system's urandom source.
+from hashlib import pbkdf2_hmac
+def get_key_iv(password, salt):
+    stretched = pbkdf2_hmac('sha256', password, salt, 50000, 32)
+    return stretched[:16], stretched[16:]
 
-    Encryption is AES-128 with CBC mode and PKCS#7 padding, with IV prepended.
+def encrypt(key, plaintext):
     """
-    iv = iv or os.urandom(16)
-    return iv + AES(key).encrypt(plaintext, iv)
+    Encrypts `plaintext` with `key`.
+
+    `key` is stretched with PBKDF2-HMAC and a random salt, and the IV comes
+    from the same source. Encryption happens with AES-128 in CBC mode and PKCS#7
+    padding. The random salt is prepended to the ciphertext.
+    """
+    if isinstance(key, str):
+        key = key.encode('utf-8')
+    if isinstance(plaintext, str):
+        plaintext = plaintext.encode('utf-8')
+
+    salt = os.urandom(16)
+    key, iv = get_key_iv(key, salt)
+
+    return salt + AES(key).encrypt(plaintext, iv)
+
 
 def decrypt(key, ciphertext):
     """
     Decrypts `ciphertext` with `key`.
-    
-    Encryption is AES-128 with CBC mode and PKCS#7 padding, with IV prepended.
+
+    `key` is stretched with PBKDF2-HMAC and a random salt, and the IV comes
+    from the same source. Decryption happens with AES-128 in CBC mode and PKCS#7
+    padding. The random salt must be prepended to the ciphertext.
     """
+
+    assert len(ciphertext) % 16 == 0, "Ciphertext must be made of full 16-byte blocks."
+
     assert len(ciphertext) >= 32, """
-    Ciphertext must be at least 32 bytes long (16 byte IV + 16 byte block). To
+    Ciphertext must be at least 32 bytes long (16 byte salt + 16 byte block). To
     encrypt or decrypt single blocks use `AES(key).decrypt_block(ciphertext)`.
     """
-    iv, ciphertext = ciphertext[:16], ciphertext[16:]
+
+    if isinstance(key, str):
+        key = key.encode('utf-8')
+
+    salt, ciphertext = ciphertext[:16], ciphertext[16:]
+    key, iv = get_key_iv(key, salt)
     return AES(key).decrypt(ciphertext, iv)
 
 __all__ = [encrypt, decrypt, AES]
 
 if __name__ == '__main__':
-    key = b'P' * 16
-    ciphertext = encrypt(key, b'M' * 16)
+    ciphertext = encrypt('my secret key', 'my secret message')
     print(ciphertext)
-    print(decrypt(key, ciphertext))
+    print(decrypt('my secret key', ciphertext))
+
+    # encrypt('my secret key', b'0' * 1000000) # 1 MB encrypted in 20 seconds.

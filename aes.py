@@ -157,6 +157,9 @@ def bytes2matrix(text):
 def matrix2bytes(matrix):
     return bytes(sum(matrix, []))
 
+def xor_bytes(a, b):
+    return bytes([i^j for i, j in zip(a, b)])
+
 
 class AES:
     "only for AES-128"
@@ -188,7 +191,7 @@ class AES:
 
         # print(self.round_keys)
 
-    def encrypt(self, plaintext):
+    def encrypt_block(self, plaintext):
         self.plain_state = bytes2matrix(plaintext)
 
         add_round_key(self.plain_state, self.round_keys[:4])
@@ -202,7 +205,7 @@ class AES:
 
         return matrix2bytes(self.plain_state)
 
-    def decrypt(self, ciphertext):
+    def decrypt_block(self, ciphertext):
         self.cipher_state = bytes2matrix(ciphertext)
 
         add_round_key(self.cipher_state, self.round_keys[40:])
@@ -216,6 +219,46 @@ class AES:
 
         return matrix2bytes(self.cipher_state)
 
+    def encrypt(self, plaintext, iv):
+        assert len(iv) == 16
+
+        l = len(plaintext)
+
+        # PKCS#7 padding. Note that if the plaintext is a multiple of 16,
+        # a whole block will be added as padding.
+        padding_len = 16 - (l % 16)
+        padding = bytes([padding_len] * padding_len)
+
+        plaintext += padding
+
+        blocks = []
+
+        previous = iv
+        for i in range(0, l, 16):
+            plaintext_block = plaintext[i:i+16]
+            # plaintext_block XOR previous
+            block = self.encrypt_block(xor_bytes(plaintext_block, previous))
+            blocks.append(block)
+            previous = block
+
+        return b''.join(blocks)
+
+    def decrypt(self, ciphertext, iv):
+        assert len(iv) == 16
+
+        l = len(ciphertext)
+
+        blocks = []
+        previous = iv
+        for i in range(0, l, 16):
+            ciphertext_block = ciphertext[i:i+16]
+            blocks.append(xor_bytes(previous, self.decrypt_block(ciphertext_block)))
+            previous = ciphertext_block
+
+        return b''.join(blocks)
+
+
+
 
 if __name__ == '__main__':
     plaintext = b'P' * 16
@@ -224,24 +267,11 @@ if __name__ == '__main__':
     #master_key = 0x2b7e151628aed2a6abf7158809cf4f3c
     # the ciphertext should be
     # 0x3925841d02dc09fbdc118597196a0b32
+    iv = b'\0' * 16
 
-    my_AES = AES(master_key)
+    a = AES(master_key)
 
-    encrypted = my_AES.encrypt(plaintext)
-    decrypted = my_AES.decrypt(encrypted)
-
-    print('plaintext:', plaintext)
-    print('masterkey:', master_key)
-
-    print('encrypted:', encrypted, end=' ')
-    if encrypted == 0x3925841d02dc09fbdc118597196a0b32:
-        print('correct!')
-    else:
-        print('wrong...')
-    print('should be:', 0x3925841d02dc09fbdc118597196a0b32)
-
-    print('decrypted:', decrypted, end=' ')
-    if decrypted == plaintext:
-        print('correct!')
-    else:
-        print('wrong...')
+    encrypted = a.encrypt(plaintext, iv)
+    print(encrypted)
+    decrypted = a.decrypt(encrypted, iv)
+    print(decrypted)

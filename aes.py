@@ -275,6 +275,10 @@ def encrypt(key, plaintext):
     `key` is stretched with PBKDF2-HMAC and a random salt, and the IV comes
     from the same source. Encryption happens with AES-128 in CBC mode and PKCS#7
     padding. The random salt is prepended to the ciphertext.
+
+    Please not this encrypt mode does not protect against tampering, only
+    against eavesdropping (i.e. it provides no integrity guarantees). For that
+    you need an HMAC.
     """
     if isinstance(key, str):
         key = key.encode('utf-8')

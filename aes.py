@@ -1,8 +1,10 @@
 #!/usr/bin/env python
 """
-Origianl AES implementation by Bo Zhu (http://about.bozhu.me).
+Origianl AES implementation by Bo Zhu (http://about.bozhu.me) at 
+https://github.com/bozhu/AES-Python
 
-PKCS#7, CBC and byte array support by Lucas Boppre (http://boppreh.com).
+PKCS#7 padding, CBC mode, PKBDF2, HMAC, byte array and string support added 
+by Lucas Boppre (http://boppreh.com) at https://github.com/boppreh/aes
 """
 
 
@@ -279,6 +281,7 @@ def get_key_iv(password, salt):
     hmac_key, rest = stretched[:HMAC_KEY_SIZE], stretched[HMAC_KEY_SIZE:]
     iv = stretched[:IV_SIZE]
     return aes_key, hmac_key, iv
+
 
 def encrypt(key, plaintext):
     """

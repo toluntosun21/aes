@@ -224,7 +224,7 @@ class AES:
 
         return matrix2bytes(self.cipher_state)
 
-    def encrypt(self, plaintext, iv):
+    def encrypt_cbc(self, plaintext, iv):
         """
         Encrypts `plaintext` using CBC mode and PKCS#7 padding, with the given
         initialization vector (iv).
@@ -243,7 +243,7 @@ class AES:
 
         return b''.join(blocks)
 
-    def decrypt(self, ciphertext, iv):
+    def decrypt_cbc(self, ciphertext, iv):
         """
         Decrypts `plaintext` using CBC mode and PKCS#7 padding, with the given
         initialization vector (iv).
@@ -302,7 +302,7 @@ def encrypt(key, plaintext):
 
     salt = os.urandom(SALT_SIZE)
     key, hmac_key, iv = get_key_iv(key, salt)
-    ciphertext = AES(key).encrypt(plaintext, iv)
+    ciphertext = AES(key).encrypt_cbc(plaintext, iv)
     hmac = new_hmac(hmac_key, salt + ciphertext, 'sha256').digest()
     assert len(hmac) == HMAC_SIZE
 
@@ -335,7 +335,7 @@ def decrypt(key, ciphertext):
     expected_hmac = new_hmac(hmac_key, salt + ciphertext, 'sha256').digest()
     assert compare_digest(hmac, expected_hmac), 'Ciphertext corrupted or tampered.'
 
-    return AES(key).decrypt(ciphertext, iv)
+    return AES(key).decrypt_cbc(ciphertext, iv)
 
 
 def run_tests():

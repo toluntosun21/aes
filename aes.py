@@ -294,7 +294,9 @@ class AES:
 
         plaintext = b''.join(blocks)
         padding_len = plaintext[-1]
-        return plaintext[:-padding_len]
+        message, padding = plaintext[:-padding_len], plaintext[-padding_len:]
+        assert all(p == padding_len for p in padding)
+        return message
 
 
 import os

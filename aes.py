@@ -328,15 +328,10 @@ def get_key_iv(password, salt):
 
 def encrypt(key, plaintext):
     """
-    Encrypts `plaintext` with `key`.
+    Encrypts `plaintext` with `key` using AES-128, an HMAC to verify integrity,
+    and PBKDF2 to stretch the given key.
 
-    `key` is stretched with PBKDF2-HMAC and a random salt, and the IV comes
-    from the same source. Encryption happens with AES-128 in CBC mode and PKCS#7
-    padding. The random salt is prepended to the ciphertext.
-
-    Please not this encrypt mode does not protect against tampering, only
-    against eavesdropping (i.e. it provides no integrity guarantees). For that
-    you need an HMAC.
+    The exact algorithm is specified in the module docstring.
     """
     if isinstance(key, str):
         key = key.encode('utf-8')
@@ -354,11 +349,10 @@ def encrypt(key, plaintext):
 
 def decrypt(key, ciphertext):
     """
-    Decrypts `ciphertext` with `key`.
+    Decrypts `plaintext` with `key` using AES-128, an HMAC to verify integrity,
+    and PBKDF2 to stretch the given key.
 
-    `key` is stretched with PBKDF2-HMAC and a random salt, and the IV comes
-    from the same source. Decryption happens with AES-128 in CBC mode and PKCS#7
-    padding. The random salt must be prepended to the ciphertext.
+    The exact algorithm is specified in the module docstring.
     """
 
     assert len(ciphertext) % 16 == 0, "Ciphertext must be made of full 16-byte blocks."

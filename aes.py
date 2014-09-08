@@ -264,9 +264,21 @@ class AES:
 
 import os
 from hashlib import pbkdf2_hmac
+from hmac import new as new_hmac, compare_digest
+
+AES_KEY_SIZE = 16
+HMAC_KEY_SIZE = 16
+IV_SIZE = 16
+
+SALT_SIZE = 16
+HMAC_SIZE = 32
+
 def get_key_iv(password, salt):
-    stretched = pbkdf2_hmac('sha256', password, salt, 50000, 32)
-    return stretched[:16], stretched[16:]
+    stretched = pbkdf2_hmac('sha256', password, salt, 50000, AES_KEY_SIZE + IV_SIZE + HMAC_KEY_SIZE)
+    aes_key, rest = stretched[:AES_KEY_SIZE], stretched[AES_KEY_SIZE:]
+    hmac_key, rest = stretched[:HMAC_KEY_SIZE], stretched[HMAC_KEY_SIZE:]
+    iv = stretched[:IV_SIZE]
+    return aes_key, hmac_key, iv
 
 def encrypt(key, plaintext):
     """
@@ -285,10 +297,13 @@ def encrypt(key, plaintext):
     if isinstance(plaintext, str):
         plaintext = plaintext.encode('utf-8')
 
-    salt = os.urandom(16)
-    key, iv = get_key_iv(key, salt)
+    salt = os.urandom(SALT_SIZE)
+    key, hmac_key, iv = get_key_iv(key, salt)
+    ciphertext = AES(key).encrypt(plaintext, iv)
+    hmac = new_hmac(hmac_key, salt + ciphertext, 'sha256').digest()
+    assert len(hmac) == HMAC_SIZE
 
-    return salt + AES(key).encrypt(plaintext, iv)
+    return hmac + salt + ciphertext
 
 
 def decrypt(key, ciphertext):
@@ -310,9 +325,28 @@ def decrypt(key, ciphertext):
     if isinstance(key, str):
         key = key.encode('utf-8')
 
-    salt, ciphertext = ciphertext[:16], ciphertext[16:]
-    key, iv = get_key_iv(key, salt)
+    hmac, ciphertext = ciphertext[:HMAC_SIZE], ciphertext[HMAC_SIZE:]
+    salt, ciphertext = ciphertext[:SALT_SIZE], ciphertext[SALT_SIZE:]
+    key, hmac_key, iv = get_key_iv(key, salt)
+
+    expected_hmac = new_hmac(hmac_key, salt + ciphertext, 'sha256').digest()
+    assert compare_digest(hmac, expected_hmac), 'Ciphertext corrupted or tampered.'
+
     return AES(key).decrypt(ciphertext, iv)
+
+
+def run_tests():
+    key = 'my secret key'.encode('utf-8')
+    message = 'my secret message'.encode('utf-8')
+
+    ciphertext = encrypt(key, message)
+    plaintext = decrypt(key, ciphertext)
+
+    # Sanity check.
+    assert key not in ciphertext
+    assert message not in ciphertext
+    assert plaintext == message
+
 
 __all__ = [encrypt, decrypt, AES]
 
@@ -323,6 +357,8 @@ if __name__ == '__main__':
 
     if len(sys.argv) < 2:
         print('Usage: ./aes.py encrypt "key" "message"')
+        print('Running tests...')
+        run_tests()
         exit()
 
     if len(sys.argv) == 3:

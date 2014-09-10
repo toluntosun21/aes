@@ -1,27 +1,46 @@
-A pure Python implementation of [AES](http://en.wikipedia.org/wiki/Advanced_Encryption_Standard)
+This is an exercise in secure symmetric-key encryption, implemented in pure
+Python (no external libraries needed).
 
-### TODO
+Original AES-128 implementation by Bo Zhu (http://about.bozhu.me) at 
+https://github.com/bozhu/AES-Python
 
-* Add 192 and 256 bit versions
+PKCS#7 padding, CBC mode, PKBDF2, HMAC, byte array and string support added 
+by Lucas Boppre (http://boppreh.com) at https://github.com/boppreh/aes
 
-### License
 
-    Copyright (C) 2012 Bo Zhu http://about.bozhu.me
+Although this is an exercise, the `encrypt` and `decrypt` functions should
+provide reasonable security to encrypted messages. The algorithm is as follows:
 
-    Permission is hereby granted, free of charge, to any person obtaining a
-    copy of this software and associated documentation files (the "Software"),
-    to deal in the Software without restriction, including without limitation
-    the rights to use, copy, modify, merge, publish, distribute, sublicense,
-    and/or sell copies of the Software, and to permit persons to whom the
-    Software is furnished to do so, subject to the following conditions:
+salt <- random(16)                                                        (1)
+key_aes, key_hmac, iv <- PKBDF2(master_key, salt)                         (2)
+HMAC(salt + E_key_aes(message, iv)) + salt + E_key_aes(message, iv)       (3+)
 
-    The above copyright notice and this permission notice shall be included in
-    all copies or substantial portions of the Software.
 
-    THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
-    IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-    FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL
-    THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
-    LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING
-    FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
-    DEALINGS IN THE SOFTWARE.
+1) 16 random bytes of salt are extracted from the system's secure random number
+generator (usually /dev/urandom)>
+
+2) The given master key is stretched and expanded by PKBDF2-HMAC(SHA256) using
+the salt from 1), to generate the AES key, HMAC key and IV (initialization
+vector for CBC).
+
+3) The given message is encrypted with AES-128 using the AES key and IV from
+step 2), in CBC mode and PKCS#7 padding.
+
+4) A HMAC-SHA256 is generated from the concatenation of the salt from 1) and
+the ciphertext from 3).
+
+5) The final ciphertext is HMAC + salt + ciphertext.
+
+
+
+Security overview:
+
+- The random salt ensures the same message will map to different ciphertexts.
+
+- The HMAC ensures the integrity of both the entire ciphertext and the PKBDF2
+  salt; encrypt-then-mac prevents attacks like Padding Oracle.
+
+- Bytes from keys, iv and salt are not reused in different algorithms.
+
+- PBKDF2 key stretching allows for relatively weak passwords to be used as AES
+  keys and be moderately resistant to brute-force, but sacrificing performance.

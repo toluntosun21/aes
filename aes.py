@@ -3,7 +3,7 @@
 This is an exercise in secure symmetric-key encryption, implemented in pure
 Python (no external libraries needed).
 
-Original AES implementation by Bo Zhu (http://about.bozhu.me) at 
+Original AES-128 implementation by Bo Zhu (http://about.bozhu.me) at 
 https://github.com/bozhu/AES-Python
 
 PKCS#7 padding, CBC mode, PKBDF2, HMAC, byte array and string support added 

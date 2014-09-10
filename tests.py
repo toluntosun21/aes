@@ -1,5 +1,5 @@
 import unittest
-from aes import AES
+from aes import AES, encrypt, decrypt
 
 class TestBlock(unittest.TestCase):
     """
@@ -67,6 +67,54 @@ class TestCbc(unittest.TestCase):
         long_message = b'M' * 100
         ciphertext = self.aes.encrypt_cbc(long_message, self.iv)
         self.assertEqual(self.aes.decrypt_cbc(ciphertext, self.iv), long_message)
+
+
+class TestFunctions(unittest.TestCase):
+    """
+    Tests the module functions `encrypt` and `decrypt`, as well as basic
+    security features like randomization and integrity.
+    """
+    def setUp(self):
+        self.key = b'master key'
+        self.message = b'secret message'
+        # Lower workload then default to speed up tests.
+        self.encrypt = lambda key, ciphertext: encrypt(key, ciphertext, 10000)
+        self.decrypt = lambda key, ciphertext: decrypt(key, ciphertext, 10000)
+
+    def test_success(self):
+        ciphertext = self.encrypt(self.key, self.message)
+        self.assertEqual(self.decrypt(self.key, ciphertext), self.message)
+
+    def test_long_message(self):
+        ciphertext = self.encrypt(self.key, self.message * 100)
+        self.assertEqual(self.decrypt(self.key, ciphertext), self.message * 100)
+
+    def test_sanity(self):
+        ciphertext = self.encrypt(self.key, self.message)
+        self.assertNotIn(self.key, ciphertext)
+        self.assertNotIn(self.message, ciphertext)
+
+    def test_randomization(self):
+        ciphertext1 = self.encrypt(self.key, self.message)
+        ciphertext2 = self.encrypt(self.key, self.message)
+        self.assertNotEqual(ciphertext1, ciphertext2)
+
+    def test_integrity(self):
+        with self.assertRaises(AssertionError):
+            ciphertext = self.encrypt(self.key, self.message)
+            ciphertext += b'a'
+            self.decrypt(self.key, ciphertext)
+
+        with self.assertRaises(AssertionError):
+            ciphertext = self.encrypt(self.key, self.message)
+            ciphertext = ciphertext[:-1]
+            self.decrypt(self.key, ciphertext)
+
+        with self.assertRaises(AssertionError):
+            ciphertext = self.encrypt(self.key, self.message)
+            ciphertext = ciphertext[:-1] + b'a'
+            self.decrypt(self.key, ciphertext)
+
 
 
 if __name__ == '__main__':

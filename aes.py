@@ -323,15 +323,15 @@ IV_SIZE = 16
 SALT_SIZE = 16
 HMAC_SIZE = 32
 
-def get_key_iv(password, salt):
-    stretched = pbkdf2_hmac('sha256', password, salt, 50000, AES_KEY_SIZE + IV_SIZE + HMAC_KEY_SIZE)
+def get_key_iv(password, salt, workload=100000):
+    stretched = pbkdf2_hmac('sha256', password, salt, workload, AES_KEY_SIZE + IV_SIZE + HMAC_KEY_SIZE)
     aes_key, rest = stretched[:AES_KEY_SIZE], stretched[AES_KEY_SIZE:]
     hmac_key, rest = stretched[:HMAC_KEY_SIZE], stretched[HMAC_KEY_SIZE:]
     iv = stretched[:IV_SIZE]
     return aes_key, hmac_key, iv
 
 
-def encrypt(key, plaintext):
+def encrypt(key, plaintext, workload=100000):
     """
     Encrypts `plaintext` with `key` using AES-128, an HMAC to verify integrity,
     and PBKDF2 to stretch the given key.
@@ -344,7 +344,7 @@ def encrypt(key, plaintext):
         plaintext = plaintext.encode('utf-8')
 
     salt = os.urandom(SALT_SIZE)
-    key, hmac_key, iv = get_key_iv(key, salt)
+    key, hmac_key, iv = get_key_iv(key, salt, workload)
     ciphertext = AES(key).encrypt_cbc(plaintext, iv)
     hmac = new_hmac(hmac_key, salt + ciphertext, 'sha256').digest()
     assert len(hmac) == HMAC_SIZE
@@ -352,7 +352,7 @@ def encrypt(key, plaintext):
     return hmac + salt + ciphertext
 
 
-def decrypt(key, ciphertext):
+def decrypt(key, ciphertext, workload=100000):
     """
     Decrypts `plaintext` with `key` using AES-128, an HMAC to verify integrity,
     and PBKDF2 to stretch the given key.
@@ -372,7 +372,7 @@ def decrypt(key, ciphertext):
 
     hmac, ciphertext = ciphertext[:HMAC_SIZE], ciphertext[HMAC_SIZE:]
     salt, ciphertext = ciphertext[:SALT_SIZE], ciphertext[SALT_SIZE:]
-    key, hmac_key, iv = get_key_iv(key, salt)
+    key, hmac_key, iv = get_key_iv(key, salt, workload)
 
     expected_hmac = new_hmac(hmac_key, salt + ciphertext, 'sha256').digest()
     assert compare_digest(hmac, expected_hmac), 'Ciphertext corrupted or tampered.'

@@ -235,6 +235,8 @@ class AES:
         """
         Encrypts a single block of 16 byte long plaintext.
         """
+        assert len(plaintext) == 16
+
         self.plain_state = bytes2matrix(plaintext)
 
         add_round_key(self.plain_state, self.round_keys[:4])
@@ -252,6 +254,8 @@ class AES:
         """
         Decrypts a single block of 16 byte long ciphertext.
         """
+        assert len(ciphertext) == 16
+
         self.cipher_state = bytes2matrix(ciphertext)
 
         add_round_key(self.cipher_state, self.round_keys[40:])
@@ -271,6 +275,7 @@ class AES:
         initialization vector (iv).
         """
         assert len(iv) == 16
+
         plaintext = pad(plaintext)
         blocks = []
         previous = iv

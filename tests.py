@@ -26,6 +26,16 @@ class TestBlock(unittest.TestCase):
         with self.assertRaises(AssertionError):
             AES(b'long key' * 10)
 
+    def test_expected_value(self):
+        """
+        Tests taken from the NIST document, Appendix B:
+        http://csrc.nist.gov/publications/fips/fips197/fips-197.pdf
+        """
+        message = b'\x32\x43\xF6\xA8\x88\x5A\x30\x8D\x31\x31\x98\xA2\xE0\x37\x07\x34'
+        key     = b'\x2B\x7E\x15\x16\x28\xAE\xD2\xA6\xAB\xF7\x15\x88\x09\xCF\x4F\x3C'
+        ciphertext = AES(bytes(key)).encrypt_block(bytes(message))
+        self.assertEqual(ciphertext, b'\x39\x25\x84\x1D\x02\xDC\x09\xFB\xDC\x11\x85\x97\x19\x6A\x0B\x32')
+
 class TestCbc(unittest.TestCase):
     """
     Tests AES-128 in CBC mode.

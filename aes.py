@@ -173,11 +173,7 @@ Rcon = (
 
 
 def bytes2matrix(text):
-    return [list(text[0:4]),
-            list(text[4:8]),
-            list(text[8:12]),
-            list(text[12:16])]
-
+    return [list(text[i:i+4]) for i in range(0, len(text), 4)]
 
 def matrix2bytes(matrix):
     return bytes(sum(matrix, []))
@@ -200,20 +196,24 @@ class AES:
     This is a raw implementation of AES, without key stretching or IV
     management. Unless you need that, please use `encrypt` and `decrypt`.
     """
+    rounds_by_key_size = {16: 10, 24: 12, 32: 14}
     def __init__(self, master_key):
         """
         Initializes the object with a given key.
         """
-        self.change_key(master_key)
+        assert len(master_key) in AES.rounds_by_key_size
+        self.rounds = AES.rounds_by_key_size[len(master_key)]
+        self._change_key(master_key)
 
-    def change_key(self, master_key):
+    def _change_key(self, master_key):
         """
         Initializes the object with a different key.
         """
-        assert len(master_key) == 16
         self.round_keys = bytes2matrix(master_key)
 
-        for i in range(4, 4 * 11):
+        block_size = 4
+        columns = block_size * (self.rounds + 1)
+        for i in range(4, columns):
             self.round_keys.append([])
             if i % 4 == 0:
                 byte = self.round_keys[i - 4][0]        \
@@ -241,7 +241,7 @@ class AES:
 
         add_round_key(self.plain_state, self.round_keys[:4])
 
-        for i in range(1, 10):
+        for i in range(1, self.rounds):
             round_encrypt(self.plain_state, self.round_keys[4 * i : 4 * (i + 1)])
 
         sub_bytes(self.plain_state)
@@ -262,7 +262,7 @@ class AES:
         inv_shift_rows(self.cipher_state)
         inv_sub_bytes(self.cipher_state)
 
-        for i in range(9, 0, -1):
+        for i in range(self.rounds - 1, 0, -1):
             round_decrypt(self.cipher_state, self.round_keys[4 * i : 4 * (i + 1)])
 
         add_round_key(self.cipher_state, self.round_keys[:4])

@@ -149,6 +149,8 @@ class TestFunctions(unittest.TestCase):
             self.decrypt(self.key, ciphertext)
 
 
+def run():
+    unittest.main()
 
 if __name__ == '__main__':
-    unittest.main()
+    run()

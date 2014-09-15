@@ -381,18 +381,6 @@ def decrypt(key, ciphertext, workload=100000):
     return AES(key).decrypt_cbc(ciphertext, iv)
 
 
-def run_tests():
-    key = 'my secret key'.encode('utf-8')
-    message = 'my secret message'.encode('utf-8')
-
-    ciphertext = encrypt(key, message)
-    plaintext = decrypt(key, ciphertext)
-
-    # Sanity check.
-    assert key not in ciphertext
-    assert message not in ciphertext
-    assert plaintext == message
-
 
 __all__ = [encrypt, decrypt, AES]
 
@@ -404,8 +392,8 @@ if __name__ == '__main__':
     if len(sys.argv) < 2:
         print('Usage: ./aes.py encrypt "key" "message"')
         print('Running tests...')
-        run_tests()
-        exit()
+        from tests import *
+        run()
 
     if len(sys.argv) == 3:
         text = read()

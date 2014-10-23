@@ -55,7 +55,7 @@ def add_round_key(s, k):
             s[i][j] ^= k[i][j]
 
 
-Sbox = (
+s_box = (
     0x63, 0x7C, 0x77, 0x7B, 0xF2, 0x6B, 0x6F, 0xC5, 0x30, 0x01, 0x67, 0x2B, 0xFE, 0xD7, 0xAB, 0x76,
     0xCA, 0x82, 0xC9, 0x7D, 0xFA, 0x59, 0x47, 0xF0, 0xAD, 0xD4, 0xA2, 0xAF, 0x9C, 0xA4, 0x72, 0xC0,
     0xB7, 0xFD, 0x93, 0x26, 0x36, 0x3F, 0xF7, 0xCC, 0x34, 0xA5, 0xE5, 0xF1, 0x71, 0xD8, 0x31, 0x15,
@@ -97,7 +97,7 @@ InvSbox = (
 def sub_bytes(s):
     for i in range(4):
         for j in range(4):
-            s[i][j] = Sbox[s[i][j]]
+            s[i][j] = s_box[s[i][j]]
 
 
 def inv_sub_bytes(s):
@@ -164,7 +164,7 @@ def round_decrypt(state_matrix, key_matrix):
     inv_sub_bytes(state_matrix)
 
 
-Rcon = (
+r_con = (
     0x00, 0x01, 0x02, 0x04, 0x08, 0x10, 0x20, 0x40,
     0x80, 0x1B, 0x36, 0x6C, 0xD8, 0xAB, 0x4D, 0x9A,
     0x2F, 0x5E, 0xBC, 0x63, 0xC6, 0x97, 0x35, 0x6A,
@@ -202,34 +202,41 @@ class AES:
         Initializes the object with a given key.
         """
         assert len(master_key) in AES.rounds_by_key_size
-        self.rounds = AES.rounds_by_key_size[len(master_key)]
+        self.n_rounds = AES.rounds_by_key_size[len(master_key)]
         self._change_key(master_key)
 
     def _change_key(self, master_key):
         """
         Initializes the object with a different key.
         """
-        self.round_keys = bytes2matrix(master_key)
+        # Initialize round keys with raw key material.
+        self.key_words = bytes2matrix(master_key)
+        iteration_size = len(master_key) // 4
 
-        block_size = 4
-        columns = block_size * (self.rounds + 1)
-        for i in range(4, columns):
-            self.round_keys.append([])
-            if i % 4 == 0:
-                byte = self.round_keys[i - 4][0]        \
-                     ^ Sbox[self.round_keys[i - 1][1]]  \
-                     ^ Rcon[i // 4]
-                self.round_keys[i].append(byte)
+        # 256-bit keys use 8 columns and need a different function during the
+        # process.
+        should_apply_g = len(master_key) == 32
 
-                for j in range(1, 4):
-                    byte = self.round_keys[i - 4][j]    \
-                         ^ Sbox[self.round_keys[i - 1][(j + 1) % 4]]
-                    self.round_keys[i].append(byte)
-            else:
-                for j in range(4):
-                    byte = self.round_keys[i - 4][j]    \
-                         ^ self.round_keys[i - 1][j]
-                    self.round_keys[i].append(byte)
+        # Each iteration has exactly as many columns as the key material.
+        columns_per_iteration = len(self.key_words)
+        i = 1
+        while len(self.key_words) < self.n_rounds * 4:
+            # Copy previous word.
+            word = list(self.key_words[-1])
+
+            # Perform schedule_core once every "row".
+            if len(self.key_words) % iteration_size == 0:
+                # Circular shift.
+                word.append(word.pop(0))
+                # Map to S-BOX.
+                word = list(map(s_box.__getitem__, word))
+                # XOR with first byte of R-CON, since the others bytes of R-CON are 0.
+                word[0] ^= r_con[i]
+                i += 1
+
+            # XOR with equivalent word from previous iteration.
+            word = xor_bytes(word, self.key_words[-iteration_size])
+            self.key_words.append(word)
 
     def encrypt_block(self, plaintext):
         """
@@ -239,14 +246,14 @@ class AES:
 
         self.plain_state = bytes2matrix(plaintext)
 
-        add_round_key(self.plain_state, self.round_keys[:4])
+        add_round_key(self.plain_state, self.key_words[:4])
 
-        for i in range(1, self.rounds):
-            round_encrypt(self.plain_state, self.round_keys[4 * i : 4 * (i + 1)])
+        for i in range(1, self.n_rounds):
+            round_encrypt(self.plain_state, self.key_words[4 * i : 4 * (i + 1)])
 
         sub_bytes(self.plain_state)
         shift_rows(self.plain_state)
-        add_round_key(self.plain_state, self.round_keys[40:])
+        add_round_key(self.plain_state, self.key_words[-4:])
 
         return matrix2bytes(self.plain_state)
 
@@ -258,14 +265,14 @@ class AES:
 
         self.cipher_state = bytes2matrix(ciphertext)
 
-        add_round_key(self.cipher_state, self.round_keys[40:])
+        add_round_key(self.cipher_state, self.key_words[-4:])
         inv_shift_rows(self.cipher_state)
         inv_sub_bytes(self.cipher_state)
 
-        for i in range(self.rounds - 1, 0, -1):
-            round_decrypt(self.cipher_state, self.round_keys[4 * i : 4 * (i + 1)])
+        for i in range(self.n_rounds - 1, 0, -1):
+            round_decrypt(self.cipher_state, self.key_words[4 * i : 4 * (i + 1)])
 
-        add_round_key(self.cipher_state, self.round_keys[:4])
+        add_round_key(self.cipher_state, self.key_words[:4])
 
         return matrix2bytes(self.cipher_state)
 

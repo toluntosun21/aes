@@ -392,6 +392,12 @@ def decrypt(key, ciphertext, workload=100000):
     return AES(key).decrypt_cbc(ciphertext, iv)
 
 
+def benchmark():
+    key = b'P' * 16
+    message = b'M' * 16
+    aes = AES(key)
+    for i in range(30000):
+        aes.encrypt_block(message)
 
 __all__ = [encrypt, decrypt, AES]
 
@@ -405,8 +411,10 @@ if __name__ == '__main__':
         print('Running tests...')
         from tests import *
         run()
-
-    if len(sys.argv) == 3:
+    elif len(sys.argv) == 2 and sys.argv[1] == 'benchmark':
+        benchmark()
+        exit()
+    elif len(sys.argv) == 3:
         text = read()
     elif len(sys.argv) > 3:
         text = ' '.join(sys.argv[2:])

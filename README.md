@@ -16,25 +16,25 @@ AES-128 implementation at https://github.com/bozhu/AES-Python
 Although this is an exercise, the `encrypt` and `decrypt` functions should
 provide reasonable security to encrypted messages. The algorithm is as follows:
 
-salt <- random(16)                                                        (1)
-key_aes, key_hmac, iv <- PKBDF2(master_key, salt)                         (2)
-HMAC(salt + E_key_aes(message, iv)) + salt + E_key_aes(message, iv)       (3+)
+  salt <- random(16)                                                        (1)
+  key_aes, key_hmac, iv <- PKBDF2(master_key, salt)                         (2)
+  HMAC(salt + E_key_aes(message, iv)) + salt + E_key_aes(message, iv)       (3+)
 
 
-1) 16 random bytes of salt are extracted from the system's secure random number
+1. 16 random bytes of salt are extracted from the system's secure random number
 generator (usually /dev/urandom)>
 
-2) The given master key is stretched and expanded by PKBDF2-HMAC(SHA256) using
+2. The given master key is stretched and expanded by PKBDF2-HMAC(SHA256) using
 the salt from 1), to generate the AES key, HMAC key and IV (initialization
 vector for CBC).
 
-3) The given message is encrypted with AES-128 using the AES key and IV from
+3. The given message is encrypted with AES-128 using the AES key and IV from
 step 2), in CBC mode and PKCS#7 padding.
 
-4) A HMAC-SHA256 is generated from the concatenation of the salt from 1) and
+4. A HMAC-SHA256 is generated from the concatenation of the salt from 1) and
 the ciphertext from 3).
 
-5) The final ciphertext is HMAC + salt + ciphertext.
+5. The final ciphertext is HMAC + salt + ciphertext.
 
 
 

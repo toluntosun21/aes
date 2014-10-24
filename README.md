@@ -14,7 +14,13 @@ AES-128 implementation at https://github.com/bozhu/AES-Python
 # `encrypt` and `decrypt`
 
 Although this is an exercise, the `encrypt` and `decrypt` functions should
-provide reasonable security to encrypted messages. The algorithm is as follows:
+provide reasonable security to encrypted messages. It ensures the data is 
+kept secret (using AES), blocks are encrypted together (CBC), the same
+message encrypted twice will have different ciphertexts (salt), the ciphertext
+hasn't been tampered with (HMAC) and the key has some defense against brute-force
+(PBKDF2).
+
+The algorithm is as follows:
 
     salt <- random(16)                                                        (1)
     key_aes, key_hmac, iv <- PKBDF2(master_key, salt)                         (2)

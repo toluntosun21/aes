@@ -11,6 +11,8 @@ AES-128 implementation at https://github.com/bozhu/AES-Python
 - `encrypt` and `decrypt` functions for protecting arbitrary data with a
   password
 
+Note: this implementation is *not* resistant to side channel attacks.
+
 # `encrypt` and `decrypt`
 
 Although this is an exercise, the `encrypt` and `decrypt` functions should

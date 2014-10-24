@@ -16,9 +16,9 @@ AES-128 implementation at https://github.com/bozhu/AES-Python
 Although this is an exercise, the `encrypt` and `decrypt` functions should
 provide reasonable security to encrypted messages. The algorithm is as follows:
 
-  salt <- random(16)                                                        (1)
-  key_aes, key_hmac, iv <- PKBDF2(master_key, salt)                         (2)
-  HMAC(salt + E_key_aes(message, iv)) + salt + E_key_aes(message, iv)       (3+)
+    salt <- random(16)                                                        (1)
+    key_aes, key_hmac, iv <- PKBDF2(master_key, salt)                         (2)
+    HMAC(salt + E_key_aes(message, iv)) + salt + E_key_aes(message, iv)       (3+)
 
 
 1. 16 random bytes of salt are extracted from the system's secure random number

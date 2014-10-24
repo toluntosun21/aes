@@ -220,12 +220,14 @@ class AES:
         # Each iteration has exactly as many columns as the key material.
         columns_per_iteration = len(self.key_words)
         i = 1
-        while len(self.key_words) < self.n_rounds * 4:
+        print()
+        while len(self.key_words) < (self.n_rounds + 1) * 4:
             # Copy previous word.
             word = list(self.key_words[-1])
 
             # Perform schedule_core once every "row".
             if len(self.key_words) % iteration_size == 0:
+                print("A", end='')
                 # Circular shift.
                 word.append(word.pop(0))
                 # Map to S-BOX.
@@ -233,6 +235,11 @@ class AES:
                 # XOR with first byte of R-CON, since the others bytes of R-CON are 0.
                 word[0] ^= r_con[i]
                 i += 1
+            elif len(master_key) == 32 and len(self.key_words) % iteration_size == 4:
+                print("C", end='')
+                word = [s_box[b] for b in word]
+            else:
+                print("B", end='')
 
             # XOR with equivalent word from previous iteration.
             word = xor_bytes(word, self.key_words[-iteration_size])

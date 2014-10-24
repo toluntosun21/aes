@@ -1,12 +1,17 @@
 This is an exercise in secure symmetric-key encryption, implemented in pure
-Python (no external libraries needed).
+Python (only built-in libraries used), expanded from Bo Zhu's (http://about.bozhu.me)
+AES-128 implementation at https://github.com/bozhu/AES-Python
 
-Original AES-128 implementation by Bo Zhu (http://about.bozhu.me) at 
-https://github.com/bozhu/AES-Python
+# What's in the box
 
-PKCS#7 padding, CBC mode, PKBDF2, HMAC, byte array and string support added 
-by Lucas Boppre (http://boppreh.com) at https://github.com/boppreh/aes
+- AES-128, AES-192 and AES-256 implementations in pure python (very slow, but
+  works).
+  Results have been tested against the NIST standard (http://csrc.nist.gov/publications/fips/fips197/fips-197.pdf)
+- CBC mode for AES with PKCS#7 padding
+- `encrypt` and `decrypt` functions for protecting arbitrary data with a
+  password
 
+# `encrypt` and `decrypt`
 
 Although this is an exercise, the `encrypt` and `decrypt` functions should
 provide reasonable security to encrypted messages. The algorithm is as follows:

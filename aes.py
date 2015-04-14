@@ -179,7 +179,7 @@ def matrix2bytes(matrix):
     return bytes(sum(matrix, []))
 
 def xor_bytes(a, b):
-    return bytes(i^j for i, j in zip(a, b))
+    return [i^j for i, j in zip(a, b)]
 
 def pad(plaintext):
     # PKCS#7 padding. Note that if the plaintext size is a multiple of 16,
@@ -187,6 +187,13 @@ def pad(plaintext):
     padding_len = 16 - (len(plaintext) % 16)
     padding = bytes([padding_len] * padding_len)
     return plaintext + padding
+
+def unpad(plaintext):
+    padding_len = plaintext[-1]
+    assert padding_len > 0
+    message, padding = plaintext[:-padding_len], plaintext[-padding_len:]
+    assert all(p == padding_len for p in padding)
+    return message
 
 
 class AES:
@@ -316,12 +323,8 @@ class AES:
             blocks.append(xor_bytes(previous, self.decrypt_block(ciphertext_block)))
             previous = ciphertext_block
 
-        plaintext = b''.join(blocks)
-        padding_len = plaintext[-1]
-        assert padding_len > 0
-        message, padding = plaintext[:-padding_len], plaintext[-padding_len:]
-        assert all(p == padding_len for p in padding)
-        return message
+        plaintext = b''.join(map(bytes, blocks))
+        return unpad(plaintext)
 
 
 import os
@@ -401,11 +404,23 @@ def benchmark():
 
 __all__ = [encrypt, decrypt, AES]
 
+def write(text, end='\n'):
+    pass
+
 if __name__ == '__main__':
     import sys
     from base64 import b64encode, b64decode
-    write = lambda b: sys.stdout.buffer.write(b)
-    read = lambda: input().rstrip().encode('utf-8')
+    base64encode = lambda text: b64encode(text).decode('utf-8')
+    base64decode = lambda binary: b64decode(binary)
+
+    write = lambda b: sys.stdout.buffer.write(b.encode('utf-8'))
+
+    if sys.version_info[0] == 2:
+        # Python 2.x
+        read = raw_input
+    elif sys.version_info[0] == 3:
+        # Python 3.x
+        read = input
 
     if len(sys.argv) != 4:
         print('Usage: ./aes.py encrypt mode "key"')
@@ -417,7 +432,12 @@ if __name__ == '__main__':
     if len(key) != 16:
         key = (key + ' ' * 16)[:16]
 
-    aes = AES(bytes(key, 'utf-8'))
+    if sys.version_info[0] == 2:
+        # Python 2.x
+        aes = AES([ord(i) for i in key.encode('utf-8')])
+    elif sys.version_info[0] == 3:
+        # Python 3.x
+        aes = AES(key.encode('utf-8'))
 
     if mode not in ['ecb', 'cbc']:
         print('Invalid mode. Expected ECB or CBC, got {}.'.format(mode))
@@ -427,20 +447,27 @@ if __name__ == '__main__':
         exit(1)
 
     if operation_name == 'encrypt':
-        plaintext = pad(read())
+        plaintext = read().strip().encode('utf-8')
     elif operation_name == 'decrypt':
-        ciphertext = b64decode(read())
+        ciphertext = b''.join(base64decode(block) for block in read().strip().split(' '))
 
     iv = b'\00' * 16
 
     if operation_name == 'encrypt' and mode == 'ecb':
+        plaintext = pad(plaintext)
         for i in range(0, len(plaintext), 16):
-            write(b64encode(aes.encrypt_block(plaintext[i:i+16])))
+            write(base64encode(aes.encrypt_block(plaintext[i:i+16])) + ' ')
+        write('\n')
     elif operation_name == 'encrypt' and mode == 'cbc':
-        write(b64encode(aes.encrypt_cbc(plaintext, iv)))
-    elif operation_name == 'decrypt' and mode == 'ecb':
+        ciphertext = aes.encrypt_cbc(plaintext, iv)
         for i in range(0, len(ciphertext), 16):
-            write(aes.decrypt_block(ciphertext[i:i+16]))
+            write(base64encode(ciphertext[i:i+16]) + ' ')
+        write('\n')
+    elif operation_name == 'decrypt' and mode == 'ecb':
+        parts = []
+        for i in range(0, len(ciphertext), 16):
+            parts.append(aes.decrypt_block(ciphertext[i:i+16]))
+        message = unpad(b''.join(parts))
+        write(message.decode('utf-8') + '\n')
     elif operation_name == 'decrypt' and mode == 'cbc':
-        write(aes.decrypt_cbc(ciphertext, iv))
-    write(b'\n')
+        write(aes.decrypt_cbc(ciphertext, iv).decode('utf-8') + '\n')

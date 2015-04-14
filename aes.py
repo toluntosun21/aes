@@ -403,27 +403,44 @@ __all__ = [encrypt, decrypt, AES]
 
 if __name__ == '__main__':
     import sys
+    from base64 import b64encode, b64decode
     write = lambda b: sys.stdout.buffer.write(b)
-    read = lambda: sys.stdin.buffer.read()
+    read = lambda: input().rstrip().encode('utf-8')
 
-    if len(sys.argv) < 2:
-        print('Usage: ./aes.py encrypt "key" "message"')
-        print('Running tests...')
-        from tests import *
-        run()
-    elif len(sys.argv) == 2 and sys.argv[1] == 'benchmark':
-        benchmark()
-        exit()
-    elif len(sys.argv) == 3:
-        text = read()
-    elif len(sys.argv) > 3:
-        text = ' '.join(sys.argv[2:])
+    if len(sys.argv) != 4:
+        print('Usage: ./aes.py encrypt mode "key"')
+        exit(1)
+    
+    _, operation_name, mode, key = sys.argv
+    operation_name, mode = operation_name.lower(), mode.lower()
 
-    if 'encrypt'.startswith(sys.argv[1]):
-        write(encrypt(sys.argv[2], text))
-    elif 'decrypt'.startswith(sys.argv[1]):
-        write(decrypt(sys.argv[2], text))
-    else:
-        print('Expected command "encrypt" or "decrypt" in first argument.')
+    if len(key) != 16:
+        key = (key + ' ' * 16)[:16]
 
-    # encrypt('my secret key', b'0' * 1000000) # 1 MB encrypted in 20 seconds.
+    aes = AES(bytes(key, 'utf-8'))
+
+    if mode not in ['ecb', 'cbc']:
+        print('Invalid mode. Expected ECB or CBC, got {}.'.format(mode))
+        exit(1)
+    if operation_name not in ['encrypt', 'decrypt']:
+        print('Invalid operation. Expected "encrypt" or "decrypt", got {}.'.format(operation_name))
+        exit(1)
+
+    if operation_name == 'encrypt':
+        plaintext = pad(read())
+    elif operation_name == 'decrypt':
+        ciphertext = b64decode(read())
+
+    iv = b'\00' * 16
+
+    if operation_name == 'encrypt' and mode == 'ecb':
+        for i in range(0, len(plaintext), 16):
+            write(b64encode(aes.encrypt_block(plaintext[i:i+16])))
+    elif operation_name == 'encrypt' and mode == 'cbc':
+        write(b64encode(aes.encrypt_cbc(plaintext, iv)))
+    elif operation_name == 'decrypt' and mode == 'ecb':
+        for i in range(0, len(ciphertext), 16):
+            write(aes.decrypt_block(ciphertext[i:i+16]))
+    elif operation_name == 'decrypt' and mode == 'cbc':
+        write(aes.decrypt_cbc(ciphertext, iv))
+    write(b'\n')

@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 """
 This is an exercise in secure symmetric-key encryption, implemented in pure
 Python (no external libraries needed).
@@ -179,7 +179,7 @@ def matrix2bytes(matrix):
     return bytes(sum(matrix, []))
 
 def xor_bytes(a, b):
-    return [i^j for i, j in zip(a, b)]
+    return bytes(i^j for i, j in zip(a, b))
 
 def pad(plaintext):
     # PKCS#7 padding. Note that if the plaintext size is a multiple of 16,
@@ -187,13 +187,6 @@ def pad(plaintext):
     padding_len = 16 - (len(plaintext) % 16)
     padding = bytes([padding_len] * padding_len)
     return plaintext + padding
-
-def unpad(plaintext):
-    padding_len = plaintext[-1]
-    assert padding_len > 0
-    message, padding = plaintext[:-padding_len], plaintext[-padding_len:]
-    assert all(p == padding_len for p in padding)
-    return message
 
 
 class AES:
@@ -323,8 +316,12 @@ class AES:
             blocks.append(xor_bytes(previous, self.decrypt_block(ciphertext_block)))
             previous = ciphertext_block
 
-        plaintext = b''.join(map(bytes, blocks))
-        return unpad(plaintext)
+        plaintext = b''.join(blocks)
+        padding_len = plaintext[-1]
+        assert padding_len > 0
+        message, padding = plaintext[:-padding_len], plaintext[-padding_len:]
+        assert all(p == padding_len for p in padding)
+        return message
 
 
 import os
@@ -404,70 +401,29 @@ def benchmark():
 
 __all__ = [encrypt, decrypt, AES]
 
-def write(text, end='\n'):
-    pass
-
 if __name__ == '__main__':
     import sys
-    from base64 import b64encode, b64decode
-    base64encode = lambda text: b64encode(text).decode('utf-8')
-    base64decode = lambda binary: b64decode(binary)
+    write = lambda b: sys.stdout.buffer.write(b)
+    read = lambda: sys.stdin.buffer.read()
 
-    write = lambda b: sys.stdout.buffer.write(b.encode('utf-8'))
+    if len(sys.argv) < 2:
+        print('Usage: ./aes.py encrypt "key" "message"')
+        print('Running tests...')
+        from tests import *
+        run()
+    elif len(sys.argv) == 2 and sys.argv[1] == 'benchmark':
+        benchmark()
+        exit()
+    elif len(sys.argv) == 3:
+        text = read()
+    elif len(sys.argv) > 3:
+        text = ' '.join(sys.argv[2:])
 
-    if sys.version_info[0] == 2:
-        # Python 2.x
-        read = raw_input
-    elif sys.version_info[0] == 3:
-        # Python 3.x
-        read = input
+    if 'encrypt'.startswith(sys.argv[1]):
+        write(encrypt(sys.argv[2], text))
+    elif 'decrypt'.startswith(sys.argv[1]):
+        write(decrypt(sys.argv[2], text))
+    else:
+        print('Expected command "encrypt" or "decrypt" in first argument.')
 
-    if len(sys.argv) != 4:
-        print('Usage: ./aes.py encrypt mode "key"')
-        exit(1)
-    
-    _, operation_name, mode, key = sys.argv
-    operation_name, mode = operation_name.lower(), mode.lower()
-
-    if len(key) != 16:
-        key = (key + ' ' * 16)[:16]
-
-    if sys.version_info[0] == 2:
-        # Python 2.x
-        aes = AES([ord(i) for i in key.encode('utf-8')])
-    elif sys.version_info[0] == 3:
-        # Python 3.x
-        aes = AES(key.encode('utf-8'))
-
-    if mode not in ['ecb', 'cbc']:
-        print('Invalid mode. Expected ECB or CBC, got {}.'.format(mode))
-        exit(1)
-    if operation_name not in ['encrypt', 'decrypt']:
-        print('Invalid operation. Expected "encrypt" or "decrypt", got {}.'.format(operation_name))
-        exit(1)
-
-    if operation_name == 'encrypt':
-        plaintext = read().strip().encode('utf-8')
-    elif operation_name == 'decrypt':
-        ciphertext = b''.join(base64decode(block) for block in read().strip().split(' '))
-
-    iv = b'\00' * 16
-
-    if operation_name == 'encrypt' and mode == 'ecb':
-        plaintext = pad(plaintext)
-        for i in range(0, len(plaintext), 16):
-            write(base64encode(aes.encrypt_block(plaintext[i:i+16])) + ' ')
-        write('\n')
-    elif operation_name == 'encrypt' and mode == 'cbc':
-        ciphertext = aes.encrypt_cbc(plaintext, iv)
-        for i in range(0, len(ciphertext), 16):
-            write(base64encode(ciphertext[i:i+16]) + ' ')
-        write('\n')
-    elif operation_name == 'decrypt' and mode == 'ecb':
-        parts = []
-        for i in range(0, len(ciphertext), 16):
-            parts.append(aes.decrypt_block(ciphertext[i:i+16]))
-        message = unpad(b''.join(parts))
-        write(message.decode('utf-8') + '\n')
-    elif operation_name == 'decrypt' and mode == 'cbc':
-        write(aes.decrypt_cbc(ciphertext, iv).decode('utf-8') + '\n')
+    # encrypt('my secret key', b'0' * 1000000) # 1 MB encrypted in 20 seconds.

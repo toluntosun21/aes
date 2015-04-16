@@ -234,22 +234,22 @@ class AES:
         """
         assert len(plaintext) == 16
 
-        self.plain_state = bytes2matrix(plaintext)
+        plain_state = bytes2matrix(plaintext)
 
-        add_round_key(self.plain_state, self.key_words[:4])
+        add_round_key(plain_state, self.key_words[:4])
 
         for i in range(1, self.n_rounds):
-            sub_bytes(self.plain_state)
-            shift_rows(self.plain_state)
-            mix_columns(self.plain_state)
+            sub_bytes(plain_state)
+            shift_rows(plain_state)
+            mix_columns(plain_state)
             key_matrix = self.key_words[4 * i : 4 * (i + 1)]
-            add_round_key(self.plain_state, key_matrix)
+            add_round_key(plain_state, key_matrix)
 
-        sub_bytes(self.plain_state)
-        shift_rows(self.plain_state)
-        add_round_key(self.plain_state, self.key_words[-4:])
+        sub_bytes(plain_state)
+        shift_rows(plain_state)
+        add_round_key(plain_state, self.key_words[-4:])
 
-        return matrix2bytes(self.plain_state)
+        return matrix2bytes(plain_state)
 
     def decrypt_block(self, ciphertext):
         """
@@ -257,22 +257,22 @@ class AES:
         """
         assert len(ciphertext) == 16
 
-        self.cipher_state = bytes2matrix(ciphertext)
+        cipher_state = bytes2matrix(ciphertext)
 
-        add_round_key(self.cipher_state, self.key_words[-4:])
-        inv_shift_rows(self.cipher_state)
-        inv_sub_bytes(self.cipher_state)
+        add_round_key(cipher_state, self.key_words[-4:])
+        inv_shift_rows(cipher_state)
+        inv_sub_bytes(cipher_state)
 
         for i in range(self.n_rounds - 1, 0, -1):
             key_matrix = self.key_words[4 * i : 4 * (i + 1)]
-            add_round_key(self.cipher_state, key_matrix)
-            inv_mix_columns(self.cipher_state)
-            inv_shift_rows(self.cipher_state)
-            inv_sub_bytes(self.cipher_state)
+            add_round_key(cipher_state, key_matrix)
+            inv_mix_columns(cipher_state)
+            inv_shift_rows(cipher_state)
+            inv_sub_bytes(cipher_state)
 
-        add_round_key(self.cipher_state, self.key_words[:4])
+        add_round_key(cipher_state, self.key_words[:4])
 
-        return matrix2bytes(self.cipher_state)
+        return matrix2bytes(cipher_state)
 
     def encrypt_cbc(self, plaintext, iv):
         """

@@ -150,20 +150,6 @@ def inv_mix_columns(s):
     mix_columns(s)
 
 
-def round_encrypt(state_matrix, key_matrix):
-    sub_bytes(state_matrix)
-    shift_rows(state_matrix)
-    mix_columns(state_matrix)
-    add_round_key(state_matrix, key_matrix)
-
-
-def round_decrypt(state_matrix, key_matrix):
-    add_round_key(state_matrix, key_matrix)
-    inv_mix_columns(state_matrix)
-    inv_shift_rows(state_matrix)
-    inv_sub_bytes(state_matrix)
-
-
 r_con = (
     0x00, 0x01, 0x02, 0x04, 0x08, 0x10, 0x20, 0x40,
     0x80, 0x1B, 0x36, 0x6C, 0xD8, 0xAB, 0x4D, 0x9A,
@@ -253,7 +239,11 @@ class AES:
         add_round_key(self.plain_state, self.key_words[:4])
 
         for i in range(1, self.n_rounds):
-            round_encrypt(self.plain_state, self.key_words[4 * i : 4 * (i + 1)])
+            sub_bytes(self.plain_state)
+            shift_rows(self.plain_state)
+            mix_columns(self.plain_state)
+            key_matrix = self.key_words[4 * i : 4 * (i + 1)]
+            add_round_key(self.plain_state, key_matrix)
 
         sub_bytes(self.plain_state)
         shift_rows(self.plain_state)
@@ -274,7 +264,11 @@ class AES:
         inv_sub_bytes(self.cipher_state)
 
         for i in range(self.n_rounds - 1, 0, -1):
-            round_decrypt(self.cipher_state, self.key_words[4 * i : 4 * (i + 1)])
+            key_matrix = self.key_words[4 * i : 4 * (i + 1)]
+            add_round_key(self.cipher_state, key_matrix)
+            inv_mix_columns(self.cipher_state)
+            inv_shift_rows(self.cipher_state)
+            inv_sub_bytes(self.cipher_state)
 
         add_round_key(self.cipher_state, self.key_words[:4])
 

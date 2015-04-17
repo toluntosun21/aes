@@ -174,6 +174,13 @@ def pad(plaintext):
     padding = bytes([padding_len] * padding_len)
     return plaintext + padding
 
+def unpad(plaintext):
+    padding_len = plaintext[-1]
+    assert padding_len > 0
+    message, padding = plaintext[:-padding_len], plaintext[-padding_len:]
+    assert all(p == padding_len for p in padding)
+    return message
+
 
 class AES:
     """
@@ -242,7 +249,7 @@ class AES:
             sub_bytes(plain_state)
             shift_rows(plain_state)
             mix_columns(plain_state)
-            key_matrix = self.key_words[4 * i : 4 * (i + 1)]
+            key_matrix = self.key_words[4*i : 4*(i+1)]
             add_round_key(plain_state, key_matrix)
 
         sub_bytes(plain_state)
@@ -264,7 +271,7 @@ class AES:
         inv_sub_bytes(cipher_state)
 
         for i in range(self.n_rounds - 1, 0, -1):
-            key_matrix = self.key_words[4 * i : 4 * (i + 1)]
+            key_matrix = self.key_words[4*i : 4*(i+1)]
             add_round_key(cipher_state, key_matrix)
             inv_mix_columns(cipher_state)
             inv_shift_rows(cipher_state)
@@ -282,12 +289,13 @@ class AES:
         assert len(iv) == 16
 
         plaintext = pad(plaintext)
+
         blocks = []
         previous = iv
+        # Splits in 16-byte parts.
         for i in range(0, len(plaintext), 16):
             plaintext_block = plaintext[i:i+16]
-            # CBC mode
-            # encrypt(plaintext_block XOR previous)
+            # CBC mode encrypt: encrypt(plaintext_block XOR previous)
             block = self.encrypt_block(xor_bytes(plaintext_block, previous))
             blocks.append(block)
             previous = block
@@ -303,19 +311,14 @@ class AES:
 
         blocks = []
         previous = iv
+        # Splits in 16-byte parts.
         for i in range(0, len(ciphertext), 16):
             ciphertext_block = ciphertext[i:i+16]
-            # CBC mode
-            # previous XOR decrypt(ciphertext)
+            # CBC mode decrypt: previous XOR decrypt(ciphertext)
             blocks.append(xor_bytes(previous, self.decrypt_block(ciphertext_block)))
             previous = ciphertext_block
 
-        plaintext = b''.join(blocks)
-        padding_len = plaintext[-1]
-        assert padding_len > 0
-        message, padding = plaintext[:-padding_len], plaintext[-padding_len:]
-        assert all(p == padding_len for p in padding)
-        return message
+        return unpad(b''.join(blocks))
 
 
 import os

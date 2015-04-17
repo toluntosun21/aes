@@ -49,12 +49,6 @@ Security overview:
 """
 
 
-def add_round_key(s, k):
-    for i in range(4):
-        for j in range(4):
-            s[i][j] ^= k[i][j]
-
-
 s_box = (
     0x63, 0x7C, 0x77, 0x7B, 0xF2, 0x6B, 0x6F, 0xC5, 0x30, 0x01, 0x67, 0x2B, 0xFE, 0xD7, 0xAB, 0x76,
     0xCA, 0x82, 0xC9, 0x7D, 0xFA, 0x59, 0x47, 0xF0, 0xAD, 0xD4, 0xA2, 0xAF, 0x9C, 0xA4, 0x72, 0xC0,
@@ -74,7 +68,7 @@ s_box = (
     0x8C, 0xA1, 0x89, 0x0D, 0xBF, 0xE6, 0x42, 0x68, 0x41, 0x99, 0x2D, 0x0F, 0xB0, 0x54, 0xBB, 0x16,
 )
 
-InvSbox = (
+inv_s_box = (
     0x52, 0x09, 0x6A, 0xD5, 0x30, 0x36, 0xA5, 0x38, 0xBF, 0x40, 0xA3, 0x9E, 0x81, 0xF3, 0xD7, 0xFB,
     0x7C, 0xE3, 0x39, 0x82, 0x9B, 0x2F, 0xFF, 0x87, 0x34, 0x8E, 0x43, 0x44, 0xC4, 0xDE, 0xE9, 0xCB,
     0x54, 0x7B, 0x94, 0x32, 0xA6, 0xC2, 0x23, 0x3D, 0xEE, 0x4C, 0x95, 0x0B, 0x42, 0xFA, 0xC3, 0x4E,
@@ -103,7 +97,7 @@ def sub_bytes(s):
 def inv_sub_bytes(s):
     for i in range(4):
         for j in range(4):
-            s[i][j] = InvSbox[s[i][j]]
+            s[i][j] = inv_s_box[s[i][j]]
 
 
 def shift_rows(s):
@@ -116,6 +110,11 @@ def inv_shift_rows(s):
     s[0][1], s[1][1], s[2][1], s[3][1] = s[3][1], s[0][1], s[1][1], s[2][1]
     s[0][2], s[1][2], s[2][2], s[3][2] = s[2][2], s[3][2], s[0][2], s[1][2]
     s[0][3], s[1][3], s[2][3], s[3][3] = s[1][3], s[2][3], s[3][3], s[0][3]
+
+def add_round_key(s, k):
+    for i in range(4):
+        for j in range(4):
+            s[i][j] ^= k[i][j]
 
 
 # learned from http://cs.ucsb.edu/~koc/cs178/projects/JT/aes.c
@@ -159,22 +158,32 @@ r_con = (
 
 
 def bytes2matrix(text):
+    """ Converts a 16-byte array into a 4x4 matrix.  """
     return [list(text[i:i+4]) for i in range(0, len(text), 4)]
 
 def matrix2bytes(matrix):
+    """ Converts a 4x4 matrix into a 16-byte array.  """
     return bytes(sum(matrix, []))
 
 def xor_bytes(a, b):
+    """ Returns a new byte array with the elements xor'ed. """
     return bytes(i^j for i, j in zip(a, b))
 
 def pad(plaintext):
-    # PKCS#7 padding. Note that if the plaintext size is a multiple of 16,
-    # a whole block will be added.
+    """
+    Pads the given plaintext with PKCS#7 padding to a multiple of 16 bytes.
+    Note that if the plaintext size is a multiple of 16,
+    a whole block will be added.
+    """
     padding_len = 16 - (len(plaintext) % 16)
     padding = bytes([padding_len] * padding_len)
     return plaintext + padding
 
 def unpad(plaintext):
+    """
+    Removes a PKCS#7 padding, returning the unpadded text and ensuring the
+    padding was correct.
+    """
     padding_len = plaintext[-1]
     assert padding_len > 0
     message, padding = plaintext[:-padding_len], plaintext[-padding_len:]
@@ -333,6 +342,10 @@ SALT_SIZE = 16
 HMAC_SIZE = 32
 
 def get_key_iv(password, salt, workload=100000):
+    """
+    Stretches the password and extracts an AES key, an HMAC key and an AES
+    initialization vector.
+    """
     stretched = pbkdf2_hmac('sha256', password, salt, workload, AES_KEY_SIZE + IV_SIZE + HMAC_KEY_SIZE)
     aes_key, rest = stretched[:AES_KEY_SIZE], stretched[AES_KEY_SIZE:]
     hmac_key, rest = stretched[:HMAC_KEY_SIZE], stretched[HMAC_KEY_SIZE:]

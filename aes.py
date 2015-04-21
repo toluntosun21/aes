@@ -191,7 +191,7 @@ def unpad(plaintext):
     return message
 
 
-class AES:
+class AES(object):
     """
     Class for AES-128 encryption with CBC mode and PKCS#7.
 

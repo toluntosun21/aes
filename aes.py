@@ -205,25 +205,25 @@ class AES(object):
         """
         assert len(master_key) in AES.rounds_by_key_size
         self.n_rounds = AES.rounds_by_key_size[len(master_key)]
-        self._change_key(master_key)
+        self._key_matrices = self._expand_key(master_key)
 
-    def _change_key(self, master_key):
+    def _expand_key(self, master_key):
         """
-        Initializes the object with a different key.
+        Expands and returns a list of key matrices for the given master_key.
         """
         # Initialize round keys with raw key material.
-        self.key_words = bytes2matrix(master_key)
+        key_columns = bytes2matrix(master_key)
         iteration_size = len(master_key) // 4
 
         # Each iteration has exactly as many columns as the key material.
-        columns_per_iteration = len(self.key_words)
+        columns_per_iteration = len(key_columns)
         i = 1
-        while len(self.key_words) < (self.n_rounds + 1) * 4:
+        while len(key_columns) < (self.n_rounds + 1) * 4:
             # Copy previous word.
-            word = list(self.key_words[-1])
+            word = list(key_columns[-1])
 
             # Perform schedule_core once every "row".
-            if len(self.key_words) % iteration_size == 0:
+            if len(key_columns) % iteration_size == 0:
                 # Circular shift.
                 word.append(word.pop(0))
                 # Map to S-BOX.
@@ -231,14 +231,17 @@ class AES(object):
                 # XOR with first byte of R-CON, since the others bytes of R-CON are 0.
                 word[0] ^= r_con[i]
                 i += 1
-            elif len(master_key) == 32 and len(self.key_words) % iteration_size == 4:
+            elif len(master_key) == 32 and len(key_columns) % iteration_size == 4:
                 # Run word through S-box in the fourth iteration when using a
                 # 256-bit key.
                 word = [s_box[b] for b in word]
 
             # XOR with equivalent word from previous iteration.
-            word = xor_bytes(word, self.key_words[-iteration_size])
-            self.key_words.append(word)
+            word = xor_bytes(word, key_columns[-iteration_size])
+            key_columns.append(word)
+
+        # Group key words in 4x4 byte matrices.
+        return [key_columns[4*i : 4*(i+1)] for i in range(len(key_columns) // 4)]
 
     def encrypt_block(self, plaintext):
         """
@@ -248,18 +251,17 @@ class AES(object):
 
         plain_state = bytes2matrix(plaintext)
 
-        add_round_key(plain_state, self.key_words[:4])
+        add_round_key(plain_state, self._key_matrices[0])
 
         for i in range(1, self.n_rounds):
             sub_bytes(plain_state)
             shift_rows(plain_state)
             mix_columns(plain_state)
-            key_matrix = self.key_words[4*i : 4*(i+1)]
-            add_round_key(plain_state, key_matrix)
+            add_round_key(plain_state, self._key_matrices[i])
 
         sub_bytes(plain_state)
         shift_rows(plain_state)
-        add_round_key(plain_state, self.key_words[-4:])
+        add_round_key(plain_state, self._key_matrices[-1])
 
         return matrix2bytes(plain_state)
 
@@ -271,18 +273,17 @@ class AES(object):
 
         cipher_state = bytes2matrix(ciphertext)
 
-        add_round_key(cipher_state, self.key_words[-4:])
+        add_round_key(cipher_state, self._key_matrices[-1])
         inv_shift_rows(cipher_state)
         inv_sub_bytes(cipher_state)
 
         for i in range(self.n_rounds - 1, 0, -1):
-            key_matrix = self.key_words[4*i : 4*(i+1)]
-            add_round_key(cipher_state, key_matrix)
+            add_round_key(cipher_state, self._key_matrices[i])
             inv_mix_columns(cipher_state)
             inv_shift_rows(cipher_state)
             inv_sub_bytes(cipher_state)
 
-        add_round_key(cipher_state, self.key_words[:4])
+        add_round_key(cipher_state, self._key_matrices[0])
 
         return matrix2bytes(cipher_state)
 

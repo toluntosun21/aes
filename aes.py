@@ -215,10 +215,6 @@ class AES(object):
         self.key_words = bytes2matrix(master_key)
         iteration_size = len(master_key) // 4
 
-        # 256-bit keys use 8 columns and need a different function during the
-        # process.
-        should_apply_g = len(master_key) == 32
-
         # Each iteration has exactly as many columns as the key material.
         columns_per_iteration = len(self.key_words)
         i = 1
@@ -231,7 +227,7 @@ class AES(object):
                 # Circular shift.
                 word.append(word.pop(0))
                 # Map to S-BOX.
-                word = list(map(s_box.__getitem__, word))
+                word = [s_box[b] for b in word]
                 # XOR with first byte of R-CON, since the others bytes of R-CON are 0.
                 word[0] ^= r_con[i]
                 i += 1

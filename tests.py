@@ -124,8 +124,234 @@ class TestCbc(unittest.TestCase):
         ciphertext = self.aes.encrypt_cbc(long_message, self.iv)
         self.assertEqual(self.aes.decrypt_cbc(ciphertext, self.iv), long_message)
 
+class TestPcbc(unittest.TestCase):
+    """
+    Tests AES-128 in CBC mode.
+    """
+    def setUp(self):
+        self.aes = AES(b'\00' * 16)
+        self.iv = b'\01' * 16
+        self.message = b'my message'
 
-@unittest.skip
+    def test_single_block(self):
+        """ Should be able to encrypt and decrypt single block messages. """
+        ciphertext = self.aes.encrypt_pcbc(self.message, self.iv)
+        self.assertEqual(self.aes.decrypt_pcbc(ciphertext, self.iv), self.message)
+
+        # Since len(message) < block size, padding won't create a new block.
+        self.assertEqual(len(ciphertext), 16)
+
+    def test_wrong_iv(self):
+        """ CBC mode should verify the IVs are of correct length."""
+        with self.assertRaises(AssertionError):
+            self.aes.encrypt_pcbc(self.message, b'short iv')
+
+        with self.assertRaises(AssertionError):
+            self.aes.encrypt_pcbc(self.message, b'long iv' * 16)
+
+        with self.assertRaises(AssertionError):
+            self.aes.decrypt_pcbc(self.message, b'short iv')
+
+        with self.assertRaises(AssertionError):
+            self.aes.decrypt_pcbc(self.message, b'long iv' * 16)
+
+    def test_different_iv(self):
+        """ Different IVs should generate different ciphertexts. """
+        iv2 = b'\02' * 16
+
+        ciphertext1 = self.aes.encrypt_pcbc(self.message, self.iv)
+        ciphertext2 = self.aes.encrypt_pcbc(self.message, iv2)
+        self.assertNotEqual(ciphertext1, ciphertext2)
+
+        plaintext1 = self.aes.decrypt_pcbc(ciphertext1, self.iv)
+        plaintext2 = self.aes.decrypt_pcbc(ciphertext2, iv2)
+        self.assertEqual(plaintext1, plaintext2)
+        self.assertEqual(plaintext1, self.message)
+
+    def test_whole_block_padding(self):
+        """ When len(message) == block size, padding will add a block. """
+        block_message = b'M' * 16
+        ciphertext = self.aes.encrypt_pcbc(block_message, self.iv)
+        self.assertEqual(len(ciphertext), 32)
+        self.assertEqual(self.aes.decrypt_pcbc(ciphertext, self.iv), block_message)
+
+    def test_long_message(self):
+        """ CBC should allow for messages longer than a single block. """
+        long_message = b'M' * 100
+        ciphertext = self.aes.encrypt_pcbc(long_message, self.iv)
+        self.assertEqual(self.aes.decrypt_pcbc(ciphertext, self.iv), long_message)
+
+class TestCfb(unittest.TestCase):
+    """
+    Tests AES-128 in CBC mode.
+    """
+    def setUp(self):
+        self.aes = AES(b'\00' * 16)
+        self.iv = b'\01' * 16
+        self.message = b'my message'
+
+    def test_single_block(self):
+        """ Should be able to encrypt and decrypt single block messages. """
+        ciphertext = self.aes.encrypt_cfb(self.message, self.iv)
+        self.assertEqual(self.aes.decrypt_cfb(ciphertext, self.iv), self.message)
+
+        # Since len(message) < block size, padding won't create a new block.
+        self.assertEqual(len(ciphertext), 16)
+
+    def test_wrong_iv(self):
+        """ CBC mode should verify the IVs are of correct length."""
+        with self.assertRaises(AssertionError):
+            self.aes.encrypt_cfb(self.message, b'short iv')
+
+        with self.assertRaises(AssertionError):
+            self.aes.encrypt_cfb(self.message, b'long iv' * 16)
+
+        with self.assertRaises(AssertionError):
+            self.aes.decrypt_cfb(self.message, b'short iv')
+
+        with self.assertRaises(AssertionError):
+            self.aes.decrypt_cfb(self.message, b'long iv' * 16)
+
+    def test_different_iv(self):
+        """ Different IVs should generate different ciphertexts. """
+        iv2 = b'\02' * 16
+
+        ciphertext1 = self.aes.encrypt_cfb(self.message, self.iv)
+        ciphertext2 = self.aes.encrypt_cfb(self.message, iv2)
+        self.assertNotEqual(ciphertext1, ciphertext2)
+
+        plaintext1 = self.aes.decrypt_cfb(ciphertext1, self.iv)
+        plaintext2 = self.aes.decrypt_cfb(ciphertext2, iv2)
+        self.assertEqual(plaintext1, plaintext2)
+        self.assertEqual(plaintext1, self.message)
+
+    def test_whole_block_padding(self):
+        """ When len(message) == block size, padding will add a block. """
+        block_message = b'M' * 16
+        ciphertext = self.aes.encrypt_cfb(block_message, self.iv)
+        self.assertEqual(len(ciphertext), 32)
+        self.assertEqual(self.aes.decrypt_cfb(ciphertext, self.iv), block_message)
+
+    def test_long_message(self):
+        """ CBC should allow for messages longer than a single block. """
+        long_message = b'M' * 100
+        ciphertext = self.aes.encrypt_cfb(long_message, self.iv)
+        self.assertEqual(self.aes.decrypt_cfb(ciphertext, self.iv), long_message)
+
+class TestOfb(unittest.TestCase):
+    """
+    Tests AES-128 in CBC mode.
+    """
+    def setUp(self):
+        self.aes = AES(b'\00' * 16)
+        self.iv = b'\01' * 16
+        self.message = b'my message'
+
+    def test_single_block(self):
+        """ Should be able to encrypt and decrypt single block messages. """
+        ciphertext = self.aes.encrypt_ofb(self.message, self.iv)
+        self.assertEqual(self.aes.decrypt_ofb(ciphertext, self.iv), self.message)
+
+        # Since len(message) < block size, padding won't create a new block.
+        self.assertEqual(len(ciphertext), 16)
+
+    def test_wrong_iv(self):
+        """ CBC mode should verify the IVs are of correct length."""
+        with self.assertRaises(AssertionError):
+            self.aes.encrypt_ofb(self.message, b'short iv')
+
+        with self.assertRaises(AssertionError):
+            self.aes.encrypt_ofb(self.message, b'long iv' * 16)
+
+        with self.assertRaises(AssertionError):
+            self.aes.decrypt_ofb(self.message, b'short iv')
+
+        with self.assertRaises(AssertionError):
+            self.aes.decrypt_ofb(self.message, b'long iv' * 16)
+
+    def test_different_iv(self):
+        """ Different IVs should generate different ciphertexts. """
+        iv2 = b'\02' * 16
+
+        ciphertext1 = self.aes.encrypt_ofb(self.message, self.iv)
+        ciphertext2 = self.aes.encrypt_ofb(self.message, iv2)
+        self.assertNotEqual(ciphertext1, ciphertext2)
+
+        plaintext1 = self.aes.decrypt_ofb(ciphertext1, self.iv)
+        plaintext2 = self.aes.decrypt_ofb(ciphertext2, iv2)
+        self.assertEqual(plaintext1, plaintext2)
+        self.assertEqual(plaintext1, self.message)
+
+    def test_whole_block_padding(self):
+        """ When len(message) == block size, padding will add a block. """
+        block_message = b'M' * 16
+        ciphertext = self.aes.encrypt_ofb(block_message, self.iv)
+        self.assertEqual(len(ciphertext), 32)
+        self.assertEqual(self.aes.decrypt_ofb(ciphertext, self.iv), block_message)
+
+    def test_long_message(self):
+        """ CBC should allow for messages longer than a single block. """
+        long_message = b'M' * 100
+        ciphertext = self.aes.encrypt_ofb(long_message, self.iv)
+        self.assertEqual(self.aes.decrypt_ofb(ciphertext, self.iv), long_message)
+
+class TestCtr(unittest.TestCase):
+    """
+    Tests AES-128 in CBC mode.
+    """
+    def setUp(self):
+        self.aes = AES(b'\00' * 16)
+        self.iv = b'\01' * 16
+        self.message = b'my message'
+
+    def test_single_block(self):
+        """ Should be able to encrypt and decrypt single block messages. """
+        ciphertext = self.aes.encrypt_ctr(self.message, self.iv)
+        self.assertEqual(self.aes.decrypt_ctr(ciphertext, self.iv), self.message)
+
+        # Since len(message) < block size, padding won't create a new block.
+        self.assertEqual(len(ciphertext), 16)
+
+    def test_wrong_iv(self):
+        """ CBC mode should verify the IVs are of correct length."""
+        with self.assertRaises(AssertionError):
+            self.aes.encrypt_ctr(self.message, b'short iv')
+
+        with self.assertRaises(AssertionError):
+            self.aes.encrypt_ctr(self.message, b'long iv' * 16)
+
+        with self.assertRaises(AssertionError):
+            self.aes.decrypt_ctr(self.message, b'short iv')
+
+        with self.assertRaises(AssertionError):
+            self.aes.decrypt_ctr(self.message, b'long iv' * 16)
+
+    def test_different_iv(self):
+        """ Different IVs should generate different ciphertexts. """
+        iv2 = b'\02' * 16
+
+        ciphertext1 = self.aes.encrypt_ctr(self.message, self.iv)
+        ciphertext2 = self.aes.encrypt_ctr(self.message, iv2)
+        self.assertNotEqual(ciphertext1, ciphertext2)
+
+        plaintext1 = self.aes.decrypt_ctr(ciphertext1, self.iv)
+        plaintext2 = self.aes.decrypt_ctr(ciphertext2, iv2)
+        self.assertEqual(plaintext1, plaintext2)
+        self.assertEqual(plaintext1, self.message)
+
+    def test_whole_block_padding(self):
+        """ When len(message) == block size, padding will add a block. """
+        block_message = b'M' * 16
+        ciphertext = self.aes.encrypt_ctr(block_message, self.iv)
+        self.assertEqual(len(ciphertext), 32)
+        self.assertEqual(self.aes.decrypt_ctr(ciphertext, self.iv), block_message)
+
+    def test_long_message(self):
+        """ CBC should allow for messages longer than a single block. """
+        long_message = b'M' * 100
+        ciphertext = self.aes.encrypt_ctr(long_message, self.iv)
+        self.assertEqual(self.aes.decrypt_ctr(ciphertext, self.iv), long_message)
+
 class TestFunctions(unittest.TestCase):
     """
     Tests the module functions `encrypt` and `decrypt`, as well as basic

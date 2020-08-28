@@ -446,10 +446,10 @@ class AES:
         nonce = iv
         for ciphertext_block in split_blocks(ciphertext):
             # CTR mode decrypt: ciphertext XOR decrypt(nonce)
-            block = xor_bytes(ciphertext_block, self.decrypt_block(nonce))
+            block = xor_bytes(ciphertext_block, self.encrypt_block(nonce))
             blocks.append(block)
             nonce = inc_bytes(nonce)
-
+        
         return unpad(b''.join(blocks))
 
 

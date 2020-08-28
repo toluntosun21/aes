@@ -6,11 +6,11 @@ class TestBlock(unittest.TestCase):
     Tests raw AES-128 block operations.
     """
     def setUp(self):
-        self.aes = AES(b'\00' * 16)
+        self.aes = AES(b'\x00' * 16)
 
     def test_success(self):
         """ Should be able to encrypt and decrypt block messages. """
-        message = b'\01' * 16
+        message = b'\x01' * 16
         ciphertext = self.aes.encrypt_block(message)
         self.assertEqual(self.aes.decrypt_block(ciphertext), message)
 
@@ -72,8 +72,8 @@ class TestCbc(unittest.TestCase):
     Tests AES-128 in CBC mode.
     """
     def setUp(self):
-        self.aes = AES(b'\00' * 16)
-        self.iv = b'\01' * 16
+        self.aes = AES(b'\x00' * 16)
+        self.iv = b'\x01' * 16
         self.message = b'my message'
 
     def test_single_block(self):
@@ -100,7 +100,7 @@ class TestCbc(unittest.TestCase):
 
     def test_different_iv(self):
         """ Different IVs should generate different ciphertexts. """
-        iv2 = b'\02' * 16
+        iv2 = b'\x02' * 16
 
         ciphertext1 = self.aes.encrypt_cbc(self.message, self.iv)
         ciphertext2 = self.aes.encrypt_cbc(self.message, iv2)
@@ -129,8 +129,8 @@ class TestPcbc(unittest.TestCase):
     Tests AES-128 in CBC mode.
     """
     def setUp(self):
-        self.aes = AES(b'\00' * 16)
-        self.iv = b'\01' * 16
+        self.aes = AES(b'\x00' * 16)
+        self.iv = b'\x01' * 16
         self.message = b'my message'
 
     def test_single_block(self):
@@ -157,7 +157,7 @@ class TestPcbc(unittest.TestCase):
 
     def test_different_iv(self):
         """ Different IVs should generate different ciphertexts. """
-        iv2 = b'\02' * 16
+        iv2 = b'\x02' * 16
 
         ciphertext1 = self.aes.encrypt_pcbc(self.message, self.iv)
         ciphertext2 = self.aes.encrypt_pcbc(self.message, iv2)
@@ -186,8 +186,8 @@ class TestCfb(unittest.TestCase):
     Tests AES-128 in CBC mode.
     """
     def setUp(self):
-        self.aes = AES(b'\00' * 16)
-        self.iv = b'\01' * 16
+        self.aes = AES(b'\x00' * 16)
+        self.iv = b'\x01' * 16
         self.message = b'my message'
 
     def test_single_block(self):
@@ -214,7 +214,7 @@ class TestCfb(unittest.TestCase):
 
     def test_different_iv(self):
         """ Different IVs should generate different ciphertexts. """
-        iv2 = b'\02' * 16
+        iv2 = b'\x02' * 16
 
         ciphertext1 = self.aes.encrypt_cfb(self.message, self.iv)
         ciphertext2 = self.aes.encrypt_cfb(self.message, iv2)
@@ -243,8 +243,8 @@ class TestOfb(unittest.TestCase):
     Tests AES-128 in CBC mode.
     """
     def setUp(self):
-        self.aes = AES(b'\00' * 16)
-        self.iv = b'\01' * 16
+        self.aes = AES(b'\x00' * 16)
+        self.iv = b'\x01' * 16
         self.message = b'my message'
 
     def test_single_block(self):
@@ -271,7 +271,7 @@ class TestOfb(unittest.TestCase):
 
     def test_different_iv(self):
         """ Different IVs should generate different ciphertexts. """
-        iv2 = b'\02' * 16
+        iv2 = b'\x02' * 16
 
         ciphertext1 = self.aes.encrypt_ofb(self.message, self.iv)
         ciphertext2 = self.aes.encrypt_ofb(self.message, iv2)
@@ -300,8 +300,8 @@ class TestCtr(unittest.TestCase):
     Tests AES-128 in CBC mode.
     """
     def setUp(self):
-        self.aes = AES(b'\00' * 16)
-        self.iv = b'\01' * 16
+        self.aes = AES(b'\x00' * 16)
+        self.iv = b'\x01' * 16
         self.message = b'my message'
 
     def test_single_block(self):
@@ -328,7 +328,7 @@ class TestCtr(unittest.TestCase):
 
     def test_different_iv(self):
         """ Different IVs should generate different ciphertexts. """
-        iv2 = b'\02' * 16
+        iv2 = b'\x02' * 16
 
         ciphertext1 = self.aes.encrypt_ctr(self.message, self.iv)
         ciphertext2 = self.aes.encrypt_ctr(self.message, iv2)

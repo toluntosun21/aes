@@ -380,16 +380,13 @@ class AES:
 
     def encrypt_ofb(self, plaintext, iv):
         """
-        Encrypts `plaintext` using OFB mode and PKCS#7 padding, with the given
-        initialization vector (iv).
+        Encrypts `plaintext` using OFB mode initialization vector (iv).
         """
         assert len(iv) == 16
 
-        plaintext = pad(plaintext)
-
         blocks = []
         previous = iv
-        for plaintext_block in split_blocks(plaintext):
+        for plaintext_block in split_blocks(plaintext, require_padding=False):
             # OFB mode encrypt: plaintext_block XOR encrypt(previous)
             block = self.encrypt_block(previous)
             ciphertext_block = xor_bytes(plaintext_block, block)
@@ -400,21 +397,20 @@ class AES:
 
     def decrypt_ofb(self, ciphertext, iv):
         """
-        Decrypts `plaintext` using OFB mode and PKCS#7 padding, with the given
-        initialization vector (iv).
+        Decrypts `ciphertext` using OFB mode initialization vector (iv).
         """
         assert len(iv) == 16
 
         blocks = []
         previous = iv
-        for ciphertext_block in split_blocks(ciphertext):
-            # OFB mode decrypt: ciphertext XOR decrypt(previous)
-            block = self.decrypt_block(previous)
+        for ciphertext_block in split_blocks(ciphertext, require_padding=False):
+            # OFB mode decrypt: ciphertext XOR encrypt(previous)
+            block = self.encrypt_block(previous)
             plaintext_block = xor_bytes(ciphertext_block, block)
             blocks.append(plaintext_block)
             previous = block
 
-        return unpad(b''.join(blocks))
+        return b''.join(blocks)
 
     def encrypt_ctr(self, plaintext, iv):
         """

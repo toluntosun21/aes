@@ -252,8 +252,7 @@ class TestOfb(unittest.TestCase):
         ciphertext = self.aes.encrypt_ofb(self.message, self.iv)
         self.assertEqual(self.aes.decrypt_ofb(ciphertext, self.iv), self.message)
 
-        # Since len(message) < block size, padding won't create a new block.
-        self.assertEqual(len(ciphertext), 16)
+        self.assertEqual(len(ciphertext), len(self.message))
 
     def test_wrong_iv(self):
         """ CBC mode should verify the IVs are of correct length."""
@@ -286,7 +285,7 @@ class TestOfb(unittest.TestCase):
         """ When len(message) == block size, padding will add a block. """
         block_message = b'M' * 16
         ciphertext = self.aes.encrypt_ofb(block_message, self.iv)
-        self.assertEqual(len(ciphertext), 32)
+        self.assertEqual(len(ciphertext), len(block_message))
         self.assertEqual(self.aes.decrypt_ofb(ciphertext, self.iv), block_message)
 
     def test_long_message(self):

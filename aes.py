@@ -470,8 +470,8 @@ def get_key_iv(password, salt, workload=100000):
     initialization vector.
     """
     stretched = pbkdf2_hmac('sha256', password, salt, workload, AES_KEY_SIZE + IV_SIZE + HMAC_KEY_SIZE)
-    aes_key, rest = stretched[:AES_KEY_SIZE], stretched[AES_KEY_SIZE:]
-    hmac_key, rest = stretched[:HMAC_KEY_SIZE], stretched[HMAC_KEY_SIZE:]
+    aes_key, stretched = stretched[:AES_KEY_SIZE], stretched[AES_KEY_SIZE:]
+    hmac_key, stretched = stretched[:HMAC_KEY_SIZE], stretched[HMAC_KEY_SIZE:]
     iv = stretched[:IV_SIZE]
     return aes_key, hmac_key, iv
 

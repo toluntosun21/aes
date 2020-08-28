@@ -288,7 +288,7 @@ class AES:
 
     def decrypt_cbc(self, ciphertext, iv):
         """
-        Decrypts `plaintext` using CBC mode and PKCS#7 padding, with the given
+        Decrypts `ciphertext` using CBC mode and PKCS#7 padding, with the given
         initialization vector (iv).
         """
         assert len(iv) == 16
@@ -325,7 +325,7 @@ class AES:
 
     def decrypt_pcbc(self, ciphertext, iv):
         """
-        Decrypts `plaintext` using PCBC mode and PKCS#7 padding, with the given
+        Decrypts `ciphertext` using PCBC mode and PKCS#7 padding, with the given
         initialization vector (iv).
         """
         assert len(iv) == 16
@@ -344,16 +344,13 @@ class AES:
 
     def encrypt_cfb(self, plaintext, iv):
         """
-        Encrypts `plaintext` using CFB mode and PKCS#7 padding, with the given
-        initialization vector (iv).
+        Encrypts `plaintext` with the given initialization vector (iv).
         """
         assert len(iv) == 16
 
-        plaintext = pad(plaintext)
-
         blocks = []
         prev_ciphertext = iv
-        for plaintext_block in split_blocks(plaintext):
+        for plaintext_block in split_blocks(plaintext, require_padding=False):
             # CFB mode encrypt: plaintext_block XOR encrypt(prev_ciphertext)
             ciphertext_block = xor_bytes(plaintext_block, self.encrypt_block(prev_ciphertext))
             blocks.append(ciphertext_block)
@@ -363,20 +360,19 @@ class AES:
 
     def decrypt_cfb(self, ciphertext, iv):
         """
-        Decrypts `plaintext` using CFB mode and PKCS#7 padding, with the given
-        initialization vector (iv).
+        Decrypts `ciphertext` with the given initialization vector (iv).
         """
         assert len(iv) == 16
 
         blocks = []
         prev_ciphertext = iv
-        for ciphertext_block in split_blocks(ciphertext):
+        for ciphertext_block in split_blocks(ciphertext, require_padding=False):
             # CFB mode decrypt: ciphertext XOR decrypt(prev_ciphertext)
             plaintext_block = xor_bytes(ciphertext_block, self.encrypt_block(prev_ciphertext))
             blocks.append(plaintext_block)
             prev_ciphertext = ciphertext_block
 
-        return unpad(b''.join(blocks))
+        return b''.join(blocks)
 
     def encrypt_ofb(self, plaintext, iv):
         """
@@ -491,7 +487,7 @@ def encrypt(key, plaintext, workload=100000):
 
 def decrypt(key, ciphertext, workload=100000):
     """
-    Decrypts `plaintext` with `key` using AES-128, an HMAC to verify integrity,
+    Decrypts `ciphertext` with `key` using AES-128, an HMAC to verify integrity,
     and PBKDF2 to stretch the given key.
 
     The exact algorithm is specified in the module docstring.

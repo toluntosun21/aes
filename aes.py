@@ -372,9 +372,9 @@ class AES:
         prev_ciphertext = iv
         for ciphertext_block in split_blocks(ciphertext):
             # CFB mode decrypt: ciphertext XOR decrypt(prev_ciphertext)
-            plaintext_block = xor_bytes(ciphertext_block, self.decrypt_block(prev_ciphertext))
+            plaintext_block = xor_bytes(ciphertext_block, self.encrypt_block(prev_ciphertext))
             blocks.append(plaintext_block)
-            prev_ciphertext = ciphertext
+            prev_ciphertext = ciphertext_block
 
         return unpad(b''.join(blocks))
 
@@ -449,7 +449,7 @@ class AES:
             block = xor_bytes(ciphertext_block, self.encrypt_block(nonce))
             blocks.append(block)
             nonce = inc_bytes(nonce)
-        
+
         return unpad(b''.join(blocks))
 
 

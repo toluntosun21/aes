@@ -166,8 +166,8 @@ def unpad(plaintext):
     assert all(p == padding_len for p in padding)
     return message
 
-def split_blocks(message, block_size=16):
-        assert len(message) % block_size == 0
+def split_blocks(message, block_size=16, require_padding=True):
+        assert len(message) % block_size == 0 or not require_padding
         return [message[i:i+16] for i in range(0, len(message), block_size)]
 
 
@@ -418,16 +418,13 @@ class AES:
 
     def encrypt_ctr(self, plaintext, iv):
         """
-        Encrypts `plaintext` using CTR mode and PKCS#7 padding, with the given
-        initialization vector (iv).
+        Encrypts `plaintext` using CTR mode with the given nounce/IV.
         """
         assert len(iv) == 16
 
-        plaintext = pad(plaintext)
-
         blocks = []
         nonce = iv
-        for plaintext_block in split_blocks(plaintext):
+        for plaintext_block in split_blocks(plaintext, require_padding=False):
             # CTR mode encrypt: plaintext_block XOR encrypt(nonce)
             block = xor_bytes(plaintext_block, self.encrypt_block(nonce))
             blocks.append(block)
@@ -437,20 +434,19 @@ class AES:
 
     def decrypt_ctr(self, ciphertext, iv):
         """
-        Decrypts `plaintext` using CTR mode and PKCS#7 padding, with the given
-        initialization vector (iv).
+        Decrypts `ciphertext` using CTR mode with the given nounce/IV.
         """
         assert len(iv) == 16
 
         blocks = []
         nonce = iv
-        for ciphertext_block in split_blocks(ciphertext):
-            # CTR mode decrypt: ciphertext XOR decrypt(nonce)
+        for ciphertext_block in split_blocks(ciphertext, require_padding=False):
+            # CTR mode decrypt: ciphertext XOR encrypt(nonce)
             block = xor_bytes(ciphertext_block, self.encrypt_block(nonce))
             blocks.append(block)
             nonce = inc_bytes(nonce)
 
-        return unpad(b''.join(blocks))
+        return b''.join(blocks)
 
 
 import os

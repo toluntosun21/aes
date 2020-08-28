@@ -309,8 +309,8 @@ class TestCtr(unittest.TestCase):
         ciphertext = self.aes.encrypt_ctr(self.message, self.iv)
         self.assertEqual(self.aes.decrypt_ctr(ciphertext, self.iv), self.message)
 
-        # Since len(message) < block size, padding won't create a new block.
-        self.assertEqual(len(ciphertext), 16)
+        # Stream mode ciphers don't increase message size.
+        self.assertEqual(len(ciphertext), len(self.message))
 
     def test_wrong_iv(self):
         """ CBC mode should verify the IVs are of correct length."""
@@ -340,14 +340,12 @@ class TestCtr(unittest.TestCase):
         self.assertEqual(plaintext1, self.message)
 
     def test_whole_block_padding(self):
-        """ When len(message) == block size, padding will add a block. """
         block_message = b'M' * 16
         ciphertext = self.aes.encrypt_ctr(block_message, self.iv)
-        self.assertEqual(len(ciphertext), 32)
+        self.assertEqual(len(ciphertext), len(block_message))
         self.assertEqual(self.aes.decrypt_ctr(ciphertext, self.iv), block_message)
 
     def test_long_message(self):
-        """ CBC should allow for messages longer than a single block. """
         long_message = b'M' * 100
         ciphertext = self.aes.encrypt_ctr(long_message, self.iv)
         self.assertEqual(self.aes.decrypt_ctr(ciphertext, self.iv), long_message)

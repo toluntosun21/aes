@@ -2,6 +2,15 @@ This is an exercise in secure symmetric-key encryption, implemented in pure
 Python (only built-in libraries used), expanded from Bo Zhu's (http://about.bozhu.me)
 AES-128 implementation at https://github.com/bozhu/AES-Python
 
+```
+import aes, os
+key = os.urandom(16)
+iv = os.urandom(16)
+encrypted = aes.AES(key).encrypt_ctr(b'Attack at dawn', iv)
+print(aes.AES(key).decrypt_ctr(encrypted, iv))
+# b'Attack at dawn'
+```
+
 # What's in the box
 
 - AES-128, AES-192 and AES-256 implementations in pure python (very slow, but

@@ -2,7 +2,7 @@ This is an exercise in secure symmetric-key encryption, implemented in pure
 Python (only built-in libraries used), expanded from Bo Zhu's (http://about.bozhu.me)
 AES-128 implementation at https://github.com/bozhu/AES-Python
 
-```
+```python
 import aes, os
 key = os.urandom(16)
 iv = os.urandom(16)
